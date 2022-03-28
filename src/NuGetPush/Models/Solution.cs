@@ -81,14 +81,14 @@ namespace NuGetPush.Models
                 if (project.Properties.Any(property => property.Name == "OutputType" && property.EvaluatedValue == "Library") &&
                     project.Properties.Any(property => property.Name == "IsPackable" && property.EvaluatedValue == "true"))
                 {
-                    Projects.Add(new ClassLibrary(projectInSolution.ProjectName, projectInSolution.AbsolutePath, project));
+                    Projects.Add(new ClassLibrary(projectInSolution.ProjectName, projectInSolution.AbsolutePath, RepositoryRoot, project));
                 }
                 else if (project.Items.Any(item => item.ItemType == "PackageReference"
                     && (item.EvaluatedInclude == "MSTest.TestFramework"
                     || item.EvaluatedInclude == "NUnit"
                     || item.EvaluatedInclude == "xunit")))
                 {
-                    TestProjects.Add(new TestProject(projectInSolution.ProjectName, projectInSolution.AbsolutePath, project));
+                    TestProjects.Add(new TestProject(projectInSolution.ProjectName, projectInSolution.AbsolutePath, RepositoryRoot, project));
                 }
             }
 

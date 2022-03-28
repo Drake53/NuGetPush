@@ -18,10 +18,11 @@ namespace NuGetPush.Models
 {
     public class ClassLibrary
     {
-        public ClassLibrary(string name, string path, Project project)
+        public ClassLibrary(string name, string projectPath, string repositoryRoot, Project project)
         {
             Name = name;
-            ProjectPath = path;
+            ProjectPath = projectPath;
+            RelativeProjectPath = Utils.MakeRelativePath(projectPath, repositoryRoot);
             Project = project;
 
             PackageName = project.Properties.Single(property => property.Name == "PackageId").EvaluatedValue;
@@ -34,6 +35,8 @@ namespace NuGetPush.Models
         public string Name { get; init; }
 
         public string ProjectPath { get; init; }
+
+        public string RelativeProjectPath { get; init; }
 
         public Project Project { get; init; }
 

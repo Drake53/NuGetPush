@@ -11,16 +11,19 @@ namespace NuGetPush.Models
 {
     public class TestProject
     {
-        public TestProject(string name, string path, Project project)
+        public TestProject(string name, string projectPath, string repositoryRoot, Project project)
         {
             Name = name;
-            ProjectPath = path;
+            ProjectPath = projectPath;
+            RelativeProjectPath = Utils.MakeRelativePath(projectPath, repositoryRoot);
             Project = project;
         }
 
         public string Name { get; init; }
 
         public string ProjectPath { get; init; }
+
+        public string RelativeProjectPath { get; init; }
 
         public Project Project { get; init; }
 
