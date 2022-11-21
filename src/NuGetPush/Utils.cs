@@ -79,12 +79,12 @@ namespace NuGetPush
             return project.KnownLatestNuGetVersion;
         }
 
-        public static NuGetVersion GetNuGetVersion(this string filePath, string packageName)
+        private static NuGetVersion GetNuGetVersion(this string filePath, string packageName)
         {
             return NuGetVersion.Parse(filePath.GetVersion(packageName));
         }
 
-        public static string GetVersion(this string filePath, string packageName)
+        private static string GetVersion(this string filePath, string packageName)
         {
             return new FileInfo(filePath).Name[(packageName.Length + 1)..^6];
         }
