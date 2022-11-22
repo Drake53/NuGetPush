@@ -8,9 +8,9 @@
 using System.Collections;
 using System.Windows.Forms;
 
-using War3App.MapAdapter.WinForms.Extensions;
+using NuGetPush.WinForms.Extensions;
 
-namespace War3App.MapAdapter.WinForms
+namespace NuGetPush.WinForms
 {
     internal sealed class ProjectListSorter : IComparer
     {

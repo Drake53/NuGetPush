@@ -10,7 +10,7 @@ using System.Windows.Forms;
 using NuGetPush.Models;
 using NuGetPush.WinForms.Enums;
 
-namespace War3App.MapAdapter.WinForms
+namespace NuGetPush.WinForms
 {
     public sealed class ItemTag
     {

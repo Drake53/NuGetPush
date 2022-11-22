@@ -7,7 +7,7 @@
 
 using System.Drawing;
 
-namespace War3App.Common.WinForms.Extensions
+namespace NuGetPush.WinForms.Extensions
 {
     public static class BitmapExtensions
     {

@@ -6,13 +6,11 @@
 // ------------------------------------------------------------------------------
 
 using System;
-using System.Linq;
 using System.Windows.Forms;
 
 using NuGetPush.WinForms.Enums;
-using NuGetPush.WinForms.Extensions;
 
-namespace War3App.MapAdapter.WinForms.Extensions
+namespace NuGetPush.WinForms.Extensions
 {
     public static class ListViewItemExtensions
     {

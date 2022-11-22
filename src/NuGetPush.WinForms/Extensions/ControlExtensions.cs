@@ -7,7 +7,7 @@
 
 using System.Windows.Forms;
 
-namespace War3App.Common.WinForms.Extensions
+namespace NuGetPush.WinForms.Extensions
 {
     public static class ControlExtensions
     {

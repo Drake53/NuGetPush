@@ -10,7 +10,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Windows.Forms;
 
-namespace War3App.MapAdapter.WinForms.Extensions
+namespace NuGetPush.WinForms.Extensions
 {
     public static class ListViewExtensions
     {
