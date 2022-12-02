@@ -26,6 +26,7 @@ namespace NuGetPush.Models
             Project = project;
 
             PackageName = project.Properties.Single(property => property.Name == "PackageId").EvaluatedValue;
+            PackageDescription = project.Properties.SingleOrDefault(property => property.Name == "Description")?.EvaluatedValue ?? PackageName;
             if (!project.ItemTypes.Contains("ProjectReference"))
             {
                 PackageVersion = NuGetVersion.Parse(project.Properties.Single(property => property.Name == "PackageVersion").EvaluatedValue);
@@ -41,6 +42,8 @@ namespace NuGetPush.Models
         public Project Project { get; init; }
 
         public string PackageName { get; init; }
+
+        public string PackageDescription { get; init; }
 
         public NuGetVersion? PackageVersion { get; init; }
 
