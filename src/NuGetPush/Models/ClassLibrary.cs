@@ -14,6 +14,8 @@ using Microsoft.Build.Evaluation;
 
 using NuGet.Versioning;
 
+using NuGetPush.Helpers;
+
 namespace NuGetPush.Models
 {
     public class ClassLibrary
@@ -22,20 +24,26 @@ namespace NuGetPush.Models
         {
             Name = name;
             ProjectPath = projectPath;
+            ProjectDirectory = new FileInfo(projectPath).DirectoryName;
             RelativeProjectPath = Utils.MakeRelativePath(projectPath, repositoryRoot);
             Project = project;
 
             PackageName = project.GetPropertyValue("PackageId");
             PackageDescription = project.GetProperty("Description")?.EvaluatedValue ?? PackageName;
+            PackageOutputPath = Path.Combine(ProjectDirectory, project.GetPropertyValue("PackageOutputPath"));
             if (!project.ItemTypes.Contains("ProjectReference"))
             {
                 PackageVersion = NuGetVersion.Parse(project.GetPropertyValue("PackageVersion"));
             }
+
+            PackageSources = PackageSourceFactory.GetPackageSources(this);
         }
 
         public string Name { get; init; }
 
         public string ProjectPath { get; init; }
+
+        public string ProjectDirectory { get; init; }
 
         public string RelativeProjectPath { get; init; }
 
@@ -44,6 +52,10 @@ namespace NuGetPush.Models
         public string PackageName { get; init; }
 
         public string PackageDescription { get; init; }
+
+        public string PackageOutputPath { get; init; }
+
+        public List<IPackageSource> PackageSources { get; init; }
 
         public NuGetVersion? PackageVersion { get; init; }
 
@@ -61,15 +73,30 @@ namespace NuGetPush.Models
 
         public HashSet<TestProject> MisconfiguredTestProjects { get; init; } = new();
 
-        public async Task FindLatestVersionAsync(string localNuGetFeedDirectory)
+        public async Task FindLatestVersionAsync()
         {
             if (PackageVersion is null)
             {
                 return;
             }
 
-            await Utils.GetLatestLocalVersion(this, localNuGetFeedDirectory);
-            await Utils.GetLatestNuGetVersion(this);
+            foreach (var packageSource in PackageSources)
+            {
+                var latestVersionFromSource = await packageSource.GetLatestNuGetVersionAsync();
+                if (packageSource.PackageSource.IsLocal)
+                {
+                    KnownLatestLocalVersion = latestVersionFromSource;
+                }
+                else
+                {
+                    KnownLatestNuGetVersion = latestVersionFromSource;
+                }
+
+                if (KnownLatestVersion is null || latestVersionFromSource > KnownLatestVersion)
+                {
+                    KnownLatestVersion = latestVersionFromSource;
+                }
+            }
         }
 
         public void FindDependencies(Solution solution)

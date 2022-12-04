@@ -96,7 +96,7 @@ namespace NuGetPush.Models
             {
                 foreach (var project in Projects)
                 {
-                    await project.FindLatestVersionAsync(nuGetLocalPackageSource);
+                    await project.FindLatestVersionAsync();
                 }
             }
 
