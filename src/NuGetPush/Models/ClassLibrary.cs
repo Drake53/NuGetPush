@@ -82,6 +82,11 @@ namespace NuGetPush.Models
 
             foreach (var packageSource in PackageSources)
             {
+                if (!PackageSourceStoreProvider.PackageSourceStore.GetOrAddIsPackageSourceEnabled(packageSource))
+                {
+                    continue;
+                }
+
                 var latestVersionFromSource = await packageSource.GetLatestNuGetVersionAsync();
                 if (packageSource.PackageSource.IsLocal)
                 {

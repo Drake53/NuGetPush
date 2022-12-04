@@ -17,6 +17,7 @@ using NuGet.Configuration;
 using NuGet.Protocol.Core.Types;
 using NuGet.Versioning;
 
+using NuGetPush.Helpers;
 using NuGetPush.Processes;
 
 namespace NuGetPush.Models
@@ -25,22 +26,14 @@ namespace NuGetPush.Models
     {
         private readonly PackageSource _packageSource;
         private readonly ClassLibrary _project;
-        private readonly SourceRepository _nuGetRepository;
 
         internal RemotePackageSource(PackageSource packageSource, ClassLibrary project)
         {
             _packageSource = packageSource;
             _project = project;
-
-            var source = new PackageSource(packageSource.Source);
-            var providers = Repository.Provider.GetCoreV3();
-
-            _nuGetRepository = new SourceRepository(source, providers);
         }
 
         public PackageSource PackageSource => _packageSource;
-
-        public string? ApiKey { get; set; }
 
         public async Task<NuGetVersion?> GetLatestNuGetVersionAsync(CancellationToken cancellationToken = default)
         {
@@ -48,8 +41,8 @@ namespace NuGetPush.Models
             try
             {
                 var filter = new SearchFilter(includePrerelease: true);
-                var search = await _nuGetRepository.GetResourceAsync<PackageSearchResource>(cancellationToken);
-                response = await search.SearchAsync($"packageid:{_project.PackageName}", filter, skip: 0, take: 20, NullLogger.Instance, cancellationToken);
+                var packageSearchResource = await PackageSourceStoreProvider.PackageSourceStore.GetPackageSearchResourceAsync(this, cancellationToken);
+                response = await packageSearchResource.SearchAsync($"packageid:{_project.PackageName}", filter, skip: 0, take: 20, NullLogger.Instance, cancellationToken);
             }
             catch (FatalProtocolException)
             {
@@ -90,7 +83,13 @@ namespace NuGetPush.Models
                 throw new FileNotFoundException($"Could not find '{symbolsFileName}'.");
             }
 
-            return DotNet.PushAsync(packageFilePath, ApiKey, _packageSource.Source, cancellationToken);
+            var apiKey = PackageSourceStoreProvider.PackageSourceStore?.GetOrAddApiKey(this);
+            if (string.IsNullOrEmpty(apiKey))
+            {
+                return Task.FromResult(false);
+            }
+
+            return DotNet.PushAsync(packageFilePath, apiKey, _packageSource.Source, cancellationToken);
         }
     }
 }
