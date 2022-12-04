@@ -7,13 +7,12 @@
 
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 
 using NuGet.Versioning;
 
 using NuGetPush.Models;
+using NuGetPush.Processes;
 
 namespace NuGetPush
 {
@@ -30,6 +29,30 @@ namespace NuGetPush
             }
 
             return fileInfo.DirectoryName[prefixLength..];
+        }
+
+        public static async Task<PackProjectsResult> PackProjectsAsync(IEnumerable<ClassLibrary> projects)
+        {
+            var succeeded = new List<ClassLibrary>();
+            var failed = new List<ClassLibrary>();
+
+            foreach (var project in projects)
+            {
+                if (await DotNet.PackAsync(project))
+                {
+                    succeeded.Add(project);
+                }
+                else
+                {
+                    failed.Add(project);
+                }
+            }
+
+            return new PackProjectsResult
+            {
+                Succeeded = succeeded,
+                Failed = failed,
+            };
         }
 
         private static NuGetVersion GetNuGetVersion(this string filePath, string packageName)
