@@ -25,7 +25,7 @@ namespace NuGetPush.WinForms
 
         public int SortColumn { get; set; }
 
-        public void Sort(object sender, ColumnClickEventArgs e)
+        public void Sort(object? sender, ColumnClickEventArgs e)
         {
             if (e.Column == SortColumn)
             {
