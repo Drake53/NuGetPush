@@ -10,6 +10,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 
 using NuGetPush.Models;
@@ -79,7 +80,7 @@ namespace NuGetPush.Processes
         }
 
         // https://docs.microsoft.com/en-us/nuget/nuget-org/publish-a-package
-        public static async Task<bool> PushAsync(string fileName, string nuGetApiKey, string nuGetSource)
+        public static async Task<bool> PushAsync(string fileName, string nuGetApiKey, string nuGetSource, CancellationToken cancellationToken = default)
         {
             var processStartInfo = new ProcessStartInfo
             {
@@ -89,7 +90,7 @@ namespace NuGetPush.Processes
             };
 
             using var dotnetPushProcess = Process.Start(processStartInfo);
-            await dotnetPushProcess.WaitForExitAsync();
+            await dotnetPushProcess.WaitForExitAsync(cancellationToken);
 
             return dotnetPushProcess.ExitCode == 0;
         }
