@@ -25,11 +25,11 @@ namespace NuGetPush.Models
             RelativeProjectPath = Utils.MakeRelativePath(projectPath, repositoryRoot);
             Project = project;
 
-            PackageName = project.Properties.Single(property => property.Name == "PackageId").EvaluatedValue;
-            PackageDescription = project.Properties.SingleOrDefault(property => property.Name == "Description")?.EvaluatedValue ?? PackageName;
+            PackageName = project.GetPropertyValue("PackageId");
+            PackageDescription = project.GetProperty("Description")?.EvaluatedValue ?? PackageName;
             if (!project.ItemTypes.Contains("ProjectReference"))
             {
-                PackageVersion = NuGetVersion.Parse(project.Properties.Single(property => property.Name == "PackageVersion").EvaluatedValue);
+                PackageVersion = NuGetVersion.Parse(project.GetPropertyValue("PackageVersion"));
             }
         }
 
@@ -75,13 +75,13 @@ namespace NuGetPush.Models
         public void FindDependencies(Solution solution)
         {
             Dependencies = new();
-            foreach (var packageReference in Project.Items.Where(item => item.ItemType == "PackageReference"))
+            foreach (var packageReference in Project.GetItems("PackageReference"))
             {
                 var packageName = packageReference.EvaluatedInclude;
                 var packageProject = solution.Projects.SingleOrDefault(packageProject => packageProject.PackageName == packageName);
                 if (packageProject is not null)
                 {
-                    var version = packageReference.Metadata.Single(metadata => metadata.Name == "Version");
+                    var version = packageReference.GetMetadata("Version");
                     if (!NuGetVersion.TryParse(version.EvaluatedValue, out var packageVersion))
                     {
                         throw new InvalidDataException($"Package version '{version.EvaluatedValue}' ({version.UnevaluatedValue}) is invalid.");
