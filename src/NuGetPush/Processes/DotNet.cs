@@ -55,7 +55,7 @@ namespace NuGetPush.Processes
             {
                 CreateNoWindow = true,
                 FileName = ProcessName,
-                Arguments = $"pack \"{project.ProjectPath}\" -nologo -c Release -verbosity:quiet /p:PACK=true",
+                Arguments = $"pack \"{project.ProjectPath}\" -nologo -c Release -verbosity:quiet /p:PACK=true /p:GeneratePackageOnBuild=false",
             };
 
             using var dotnetPackProcess = Process.Start(processStartInfo);
