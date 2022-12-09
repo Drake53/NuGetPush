@@ -26,7 +26,7 @@ namespace NuGetPush.WinForms.Extensions
             {
                 string.Empty,
                 tag.ClassLibrary.Name,
-                tag.ClassLibrary.PackageVersion?.ToString() ?? string.Empty,
+                tag.ClassLibrary.PackageVersion?.ToNormalizedString() ?? string.Empty,
                 string.Empty,
                 string.Empty,
             });

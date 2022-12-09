@@ -50,7 +50,7 @@ namespace NuGetPush.Models
                 return Task.FromResult(false);
             }
 
-            var fileName = $"{_project.PackageName}.{_project.PackageVersion}";
+            var fileName = $"{_project.PackageName}.{_project.PackageVersion.ToNormalizedString()}";
             var packageFileName = $"{fileName}.nupkg";
             var packageFilePath = Path.Combine(packageOutputPath, packageFileName);
 
