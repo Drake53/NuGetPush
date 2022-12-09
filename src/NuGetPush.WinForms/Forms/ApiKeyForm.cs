@@ -30,6 +30,8 @@ namespace NuGetPush.WinForms.Forms
             _apiKeyTextBox = new TextBox
             {
                 PlaceholderText = "API key...",
+                PasswordChar = '*',
+                Dock = DockStyle.Top,
             };
 
             _okButton = new Button
