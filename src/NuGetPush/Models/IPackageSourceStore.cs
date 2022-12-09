@@ -18,7 +18,7 @@ namespace NuGetPush.Models
 
         bool GetIsPackageSourceEnabled(IPackageSource packageSource);
 
-        Task<PackageSearchResource> GetPackageSearchResourceAsync(RemotePackageSource packageSource, CancellationToken cancellationToken = default);
+        Task<FindPackageByIdResource> GetPackageByIdResourceAsync(RemotePackageSource packageSource, CancellationToken cancellationToken = default);
 
         string? GetOrAddApiKey(RemotePackageSource packageSource);
 

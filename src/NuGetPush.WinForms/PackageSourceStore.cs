@@ -21,7 +21,7 @@ namespace NuGetPush.WinForms
     public class PackageSourceStore : IPackageSourceStore
     {
         private readonly Dictionary<string, bool> _packageSourcesEnabled;
-        private readonly Dictionary<string, PackageSearchResource> _packageSearchResources;
+        private readonly Dictionary<string, FindPackageByIdResource> _packageByIdResources;
         private readonly Dictionary<string, string>? _apiKeys;
         private readonly bool _supportsMultiplePackageSources;
         private bool _hasLocalPackageSourceEnabled;
@@ -30,7 +30,7 @@ namespace NuGetPush.WinForms
         public PackageSourceStore(bool storeApiKeys, bool supportsMultiplePackageSources = false)
         {
             _packageSourcesEnabled = new Dictionary<string, bool>(StringComparer.Ordinal);
-            _packageSearchResources = new Dictionary<string, PackageSearchResource>(StringComparer.Ordinal);
+            _packageByIdResources = new Dictionary<string, FindPackageByIdResource>(StringComparer.Ordinal);
             if (storeApiKeys)
             {
                 _apiKeys = new Dictionary<string, string>(StringComparer.Ordinal);
@@ -100,21 +100,21 @@ namespace NuGetPush.WinForms
             return _packageSourcesEnabled.GetValueOrDefault(packageSource.PackageSource.Source, false);
         }
 
-        public async Task<PackageSearchResource> GetPackageSearchResourceAsync(RemotePackageSource packageSource, CancellationToken cancellationToken = default)
+        public async Task<FindPackageByIdResource> GetPackageByIdResourceAsync(RemotePackageSource packageSource, CancellationToken cancellationToken = default)
         {
-            if (_packageSearchResources.TryGetValue(packageSource.PackageSource.Source, out var packageSearchResource))
+            if (_packageByIdResources.TryGetValue(packageSource.PackageSource.Source, out var packageByIdResource))
             {
-                return packageSearchResource;
+                return packageByIdResource;
             }
 
             var providers = Repository.Provider.GetCoreV3();
             var sourceRepository = new SourceRepository(packageSource.PackageSource, providers);
 
-            packageSearchResource = await sourceRepository.GetResourceAsync<PackageSearchResource>(cancellationToken);
+            packageByIdResource = await sourceRepository.GetResourceAsync<FindPackageByIdResource>(cancellationToken);
 
-            _packageSearchResources.Add(packageSource.PackageSource.Source, packageSearchResource);
+            _packageByIdResources.Add(packageSource.PackageSource.Source, packageByIdResource);
 
-            return packageSearchResource;
+            return packageByIdResource;
         }
 
         public string? GetOrAddApiKey(RemotePackageSource packageSource)

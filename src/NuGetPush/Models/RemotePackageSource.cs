@@ -6,7 +6,6 @@
 // ------------------------------------------------------------------------------
 
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -37,21 +36,16 @@ namespace NuGetPush.Models
 
         public async Task<NuGetVersion?> GetLatestNuGetVersionAsync(CancellationToken cancellationToken = default)
         {
-            IEnumerable<IPackageSearchMetadata> response;
             try
             {
-                var filter = new SearchFilter(includePrerelease: true);
-                var packageSearchResource = await PackageSourceStoreProvider.PackageSourceStore.GetPackageSearchResourceAsync(this, cancellationToken);
-                response = await packageSearchResource.SearchAsync($"packageid:{_project.PackageName}", filter, skip: 0, take: 20, NullLogger.Instance, cancellationToken);
+                var packageByIdResource = await PackageSourceStoreProvider.PackageSourceStore.GetPackageByIdResourceAsync(this, cancellationToken);
+                var packageVersions = await packageByIdResource.GetAllVersionsAsync(_project.PackageName, new SourceCacheContext(), NullLogger.Instance, cancellationToken);
+                return packageVersions.Max();
             }
             catch (FatalProtocolException)
             {
                 return null;
             }
-
-            var result = response.SingleOrDefault(result => string.Equals(result.Identity.Id, _project.PackageName, StringComparison.Ordinal));
-
-            return result?.Identity.Version;
         }
 
         public Task<bool> UploadPackageAsync(CancellationToken cancellationToken = default)
