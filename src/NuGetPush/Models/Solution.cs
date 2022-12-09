@@ -44,6 +44,8 @@ namespace NuGetPush.Models
 
         public List<TestProject> TestProjects { get; private set; }
 
+        public List<string> InvalidProjects { get; private set; }
+
         public override string ToString() => Name;
 
         public async Task ParseSolutionProjectsAsync(string? nuGetLocalPackageSource, bool checkDependencies)
@@ -55,6 +57,7 @@ namespace NuGetPush.Models
 
             Projects = new();
             TestProjects = new();
+            InvalidProjects = new();
 
             var solutionFile = SolutionFile.Parse(_solutionFileName);
 
@@ -76,7 +79,16 @@ namespace NuGetPush.Models
                     continue;
                 }
 
-                var project = Project.FromFile(projectInSolution.AbsolutePath, projectOptions);
+                Project project;
+                try
+                {
+                    project = Project.FromFile(projectInSolution.AbsolutePath, projectOptions);
+                }
+                catch
+                {
+                    InvalidProjects.Add(projectInSolution.AbsolutePath);
+                    continue;
+                }
 
                 if (project.Properties.Any(property => property.Name == "OutputType" && property.EvaluatedValue == "Library") &&
                     project.Properties.Any(property => property.Name == "IsPackable" && property.EvaluatedValue == "true"))
