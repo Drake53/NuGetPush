@@ -77,6 +77,11 @@ namespace NuGetPush.Models
                 throw new FileNotFoundException($"Could not find '{symbolsFileName}'.");
             }
 
+            if (_packageSource.Credentials is not null)
+            {
+                return DotNet.PushAsync(packageFilePath, _packageSource.Credentials.Password, _packageSource.Source, cancellationToken);
+            }
+
             var apiKey = PackageSourceStoreProvider.PackageSourceStore?.GetOrAddApiKey(this);
             if (string.IsNullOrEmpty(apiKey))
             {

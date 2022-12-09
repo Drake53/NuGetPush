@@ -86,7 +86,7 @@ namespace NuGetPush.Processes
             {
                 CreateNoWindow = true,
                 FileName = ProcessName,
-                Arguments = $"nuget push \"{fileName}\" --api-key {nuGetApiKey} --source {nuGetSource}",
+                Arguments = $"nuget push \"{fileName}\" --api-key \"{nuGetApiKey}\" --source \"{nuGetSource}\"",
             };
 
             using var dotnetPushProcess = Process.Start(processStartInfo);
