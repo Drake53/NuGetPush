@@ -14,6 +14,7 @@ using Microsoft.Build.Evaluation;
 
 using NuGet.Versioning;
 
+using NuGetPush.Extensions;
 using NuGetPush.Helpers;
 
 namespace NuGetPush.Models
@@ -31,9 +32,9 @@ namespace NuGetPush.Models
             PackageName = project.GetPropertyValue("PackageId");
             PackageDescription = project.GetProperty("Description")?.EvaluatedValue ?? PackageName;
             PackageOutputPath = Path.Combine(ProjectDirectory, project.GetPropertyValue("PackageOutputPath"));
-            if (!project.ItemTypes.Contains("ProjectReference"))
+            if (!project.ItemTypes.Contains("ProjectReference") && project.TryGetExplicitVersion(out var packageVersion))
             {
-                PackageVersion = NuGetVersion.Parse(project.GetPropertyValue("PackageVersion"));
+                PackageVersion = packageVersion;
             }
 
             PackageSources = PackageSourceFactory.GetPackageSources(this);
