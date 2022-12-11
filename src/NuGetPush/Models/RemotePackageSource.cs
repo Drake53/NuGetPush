@@ -8,6 +8,8 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Net;
+using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -36,14 +38,31 @@ namespace NuGetPush.Models
 
         public async Task<NuGetVersion?> GetLatestNuGetVersionAsync(CancellationToken cancellationToken = default)
         {
+            var requiresAuthentication = PackageSourceStoreProvider.PackageSourceStore.GetPackageSourceRequiresAuthentication(this, out var credentials);
+            if (requiresAuthentication && credentials is null)
+            {
+                return null;
+            }
+
+            _packageSource.Credentials = credentials;
+
             try
             {
                 var packageByIdResource = await PackageSourceStoreProvider.PackageSourceStore.GetPackageByIdResourceAsync(this, cancellationToken);
                 var packageVersions = await packageByIdResource.GetAllVersionsAsync(_project.PackageName, new SourceCacheContext(), NullLogger.Instance, cancellationToken);
                 return packageVersions.Max();
             }
-            catch (FatalProtocolException)
+            catch (FatalProtocolException e)
             {
+                if (e.InnerException is HttpRequestException httpRequestException &&
+                    httpRequestException.StatusCode == HttpStatusCode.Unauthorized)
+                {
+                    if (PackageSourceStoreProvider.PackageSourceStore.SetPackageSourceRequiresAuthentication(this, true))
+                    {
+                        return await GetLatestNuGetVersionAsync(cancellationToken);
+                    }
+                }
+
                 return null;
             }
         }

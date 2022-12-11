@@ -11,6 +11,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
+using NuGet.Configuration;
 using NuGet.Protocol.Core.Types;
 
 using NuGetPush.Models;
@@ -21,6 +22,8 @@ namespace NuGetPush.WinForms
     public class PackageSourceStore : IPackageSourceStore
     {
         private readonly Dictionary<string, bool> _packageSourcesEnabled;
+        private readonly Dictionary<string, bool> _packageSourcesRequiresAuthentication;
+        private readonly Dictionary<string, PackageSourceCredential?> _packageSourcesCredentials;
         private readonly Dictionary<string, FindPackageByIdResource> _packageByIdResources;
         private readonly Dictionary<string, string>? _apiKeys;
         private readonly bool _supportsMultiplePackageSources;
@@ -30,6 +33,8 @@ namespace NuGetPush.WinForms
         public PackageSourceStore(bool storeApiKeys, bool supportsMultiplePackageSources = false)
         {
             _packageSourcesEnabled = new Dictionary<string, bool>(StringComparer.Ordinal);
+            _packageSourcesRequiresAuthentication = new Dictionary<string, bool>(StringComparer.Ordinal);
+            _packageSourcesCredentials = new Dictionary<string, PackageSourceCredential>(StringComparer.Ordinal);
             _packageByIdResources = new Dictionary<string, FindPackageByIdResource>(StringComparer.Ordinal);
             if (storeApiKeys)
             {
@@ -100,6 +105,41 @@ namespace NuGetPush.WinForms
             return _packageSourcesEnabled.GetValueOrDefault(packageSource.PackageSource.Source, false);
         }
 
+        public bool GetPackageSourceRequiresAuthentication(RemotePackageSource packageSource, out PackageSourceCredential? credentials)
+        {
+            credentials = _packageSourcesCredentials.GetValueOrDefault(packageSource.PackageSource.Source, null);
+            return _packageSourcesRequiresAuthentication.GetValueOrDefault(packageSource.PackageSource.Source, false);
+        }
+
+        public bool SetPackageSourceRequiresAuthentication(RemotePackageSource packageSource, bool requiresAuthentication)
+        {
+            _packageSourcesRequiresAuthentication.Add(packageSource.PackageSource.Source, requiresAuthentication);
+
+            if (!requiresAuthentication)
+            {
+                return false;
+            }
+
+            using var credentialsForm = new CredentialsForm(packageSource);
+
+            var dialogResult = credentialsForm.ShowDialog();
+            if (dialogResult == DialogResult.OK)
+            {
+                _packageByIdResources.Remove(packageSource.PackageSource.Source);
+
+                _packageSourcesCredentials.Add(packageSource.PackageSource.Source, new PackageSourceCredential(
+                    packageSource.PackageSource.Source,
+                    credentialsForm.UserName,
+                    credentialsForm.AccessToken,
+                    true,
+                    null));
+
+                return true;
+            }
+
+            return false;
+        }
+
         public async Task<FindPackageByIdResource> GetPackageByIdResourceAsync(RemotePackageSource packageSource, CancellationToken cancellationToken = default)
         {
             if (_packageByIdResources.TryGetValue(packageSource.PackageSource.Source, out var packageByIdResource))
@@ -124,7 +164,7 @@ namespace NuGetPush.WinForms
                 return apiKey;
             }
 
-            var apiKeyForm = new ApiKeyForm(packageSource);
+            using var apiKeyForm = new ApiKeyForm(packageSource);
 
             var dialogResult = apiKeyForm.ShowDialog();
             if (dialogResult == DialogResult.OK)

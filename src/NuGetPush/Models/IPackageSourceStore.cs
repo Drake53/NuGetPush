@@ -8,6 +8,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 
+using NuGet.Configuration;
 using NuGet.Protocol.Core.Types;
 
 namespace NuGetPush.Models
@@ -17,6 +18,10 @@ namespace NuGetPush.Models
         bool GetOrAddIsPackageSourceEnabled(IPackageSource packageSource);
 
         bool GetIsPackageSourceEnabled(IPackageSource packageSource);
+
+        bool GetPackageSourceRequiresAuthentication(RemotePackageSource packageSource, out PackageSourceCredential? credentials);
+
+        bool SetPackageSourceRequiresAuthentication(RemotePackageSource packageSource, bool requiresAuthentication);
 
         Task<FindPackageByIdResource> GetPackageByIdResourceAsync(RemotePackageSource packageSource, CancellationToken cancellationToken = default);
 
