@@ -12,16 +12,16 @@ using System.Threading.Tasks;
 
 using Microsoft.Build.Evaluation;
 
+using NuGet.Configuration;
 using NuGet.Versioning;
 
 using NuGetPush.Extensions;
-using NuGetPush.Helpers;
 
 namespace NuGetPush.Models
 {
     public class ClassLibrary
     {
-        public ClassLibrary(string name, string projectPath, string repositoryRoot, Project project)
+        public ClassLibrary(string name, string projectPath, string repositoryRoot, Project project, PackageSource localPackageSource, PackageSource remotePackageSource)
         {
             Name = name;
             ProjectPath = projectPath;
@@ -37,7 +37,8 @@ namespace NuGetPush.Models
                 PackageVersion = packageVersion;
             }
 
-            PackageSources = PackageSourceFactory.GetPackageSources(this);
+            LocalPackageSource = localPackageSource;
+            RemotePackageSource = remotePackageSource;
         }
 
         public string Name { get; init; }
@@ -56,7 +57,9 @@ namespace NuGetPush.Models
 
         public string PackageOutputPath { get; init; }
 
-        public List<IPackageSource> PackageSources { get; init; }
+        public PackageSource LocalPackageSource { get; }
+
+        public PackageSource RemotePackageSource { get; }
 
         public NuGetVersion? PackageVersion { get; init; }
 
@@ -81,15 +84,10 @@ namespace NuGetPush.Models
                 return;
             }
 
-            foreach (var packageSource in PackageSources)
+            foreach (var packageSource in new[] { LocalPackageSource, RemotePackageSource })
             {
-                if (!PackageSourceStoreProvider.PackageSourceStore.GetOrAddIsPackageSourceEnabled(packageSource))
-                {
-                    continue;
-                }
-
-                var latestVersionFromSource = await packageSource.GetLatestNuGetVersionAsync();
-                if (packageSource.PackageSource.IsLocal)
+                var latestVersionFromSource = await packageSource.GetLatestNuGetVersionAsync(this);
+                if (packageSource.IsLocal)
                 {
                     KnownLatestLocalVersion = latestVersionFromSource;
                 }

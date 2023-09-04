@@ -105,15 +105,25 @@ namespace NuGetPush.WinForms
             return _packageSourcesEnabled.GetValueOrDefault(packageSource.PackageSource.Source, false);
         }
 
-        public bool GetPackageSourceRequiresAuthentication(RemotePackageSource packageSource, out PackageSourceCredential? credentials)
+        public bool GetPackageSourceRequiresAuthentication(PackageSource packageSource, out PackageSourceCredential? credentials)
         {
-            credentials = _packageSourcesCredentials.GetValueOrDefault(packageSource.PackageSource.Source, null);
-            return _packageSourcesRequiresAuthentication.GetValueOrDefault(packageSource.PackageSource.Source, false);
+            if (packageSource.IsLocal)
+            {
+                throw new ArgumentException("PackageSource must be remote.", nameof(packageSource));
+            }
+
+            credentials = _packageSourcesCredentials.GetValueOrDefault(packageSource.Source, null);
+            return _packageSourcesRequiresAuthentication.GetValueOrDefault(packageSource.Source, false);
         }
 
-        public bool SetPackageSourceRequiresAuthentication(RemotePackageSource packageSource, bool requiresAuthentication)
+        public bool SetPackageSourceRequiresAuthentication(PackageSource packageSource, bool requiresAuthentication)
         {
-            _packageSourcesRequiresAuthentication.Add(packageSource.PackageSource.Source, requiresAuthentication);
+            if (packageSource.IsLocal)
+            {
+                throw new ArgumentException("PackageSource must be remote.", nameof(packageSource));
+            }
+
+            _packageSourcesRequiresAuthentication.Add(packageSource.Source, requiresAuthentication);
 
             if (!requiresAuthentication)
             {
@@ -125,10 +135,10 @@ namespace NuGetPush.WinForms
             var dialogResult = credentialsForm.ShowDialog();
             if (dialogResult == DialogResult.OK)
             {
-                _packageByIdResources.Remove(packageSource.PackageSource.Source);
+                _packageByIdResources.Remove(packageSource.Source);
 
-                _packageSourcesCredentials.Add(packageSource.PackageSource.Source, new PackageSourceCredential(
-                    packageSource.PackageSource.Source,
+                _packageSourcesCredentials.Add(packageSource.Source, new PackageSourceCredential(
+                    packageSource.Source,
                     credentialsForm.UserName,
                     credentialsForm.AccessToken,
                     true,
@@ -140,26 +150,36 @@ namespace NuGetPush.WinForms
             return false;
         }
 
-        public async Task<FindPackageByIdResource> GetPackageByIdResourceAsync(RemotePackageSource packageSource, CancellationToken cancellationToken = default)
+        public async Task<FindPackageByIdResource> GetPackageByIdResourceAsync(PackageSource packageSource, CancellationToken cancellationToken = default)
         {
-            if (_packageByIdResources.TryGetValue(packageSource.PackageSource.Source, out var packageByIdResource))
+            if (packageSource.IsLocal)
+            {
+                throw new ArgumentException("PackageSource must be remote.", nameof(packageSource));
+            }
+
+            if (_packageByIdResources.TryGetValue(packageSource.Source, out var packageByIdResource))
             {
                 return packageByIdResource;
             }
 
             var providers = Repository.Provider.GetCoreV3();
-            var sourceRepository = new SourceRepository(packageSource.PackageSource, providers);
+            var sourceRepository = new SourceRepository(packageSource, providers);
 
             packageByIdResource = await sourceRepository.GetResourceAsync<FindPackageByIdResource>(cancellationToken);
 
-            _packageByIdResources.Add(packageSource.PackageSource.Source, packageByIdResource);
+            _packageByIdResources.Add(packageSource.Source, packageByIdResource);
 
             return packageByIdResource;
         }
 
-        public string? GetOrAddApiKey(RemotePackageSource packageSource)
+        public string? GetOrAddApiKey(PackageSource packageSource)
         {
-            if (_apiKeys is not null && _apiKeys.TryGetValue(packageSource.PackageSource.Source, out var apiKey))
+            if (packageSource.IsLocal)
+            {
+                throw new ArgumentException("PackageSource must be remote.", nameof(packageSource));
+            }
+
+            if (_apiKeys is not null && _apiKeys.TryGetValue(packageSource.Source, out var apiKey))
             {
                 return apiKey;
             }
@@ -171,7 +191,7 @@ namespace NuGetPush.WinForms
             {
                 apiKey = apiKeyForm.ApiKey;
 
-                _apiKeys?.Add(packageSource.PackageSource.Source, apiKey);
+                _apiKeys?.Add(packageSource.Source, apiKey);
 
                 return apiKey;
             }

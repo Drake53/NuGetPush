@@ -5,11 +5,13 @@
 // </copyright>
 // ------------------------------------------------------------------------------
 
+using System;
 using System.ComponentModel;
 using System.Drawing;
 using System.Windows.Forms;
 
-using NuGetPush.Models;
+using NuGet.Configuration;
+
 using NuGetPush.WinForms.Extensions;
 
 namespace NuGetPush.WinForms.Forms
@@ -21,11 +23,16 @@ namespace NuGetPush.WinForms.Forms
         private readonly Button _okButton;
         private readonly Button _cancelButton;
 
-        public ApiKeyForm(RemotePackageSource packageSource)
+        public ApiKeyForm(PackageSource packageSource)
         {
+            if (packageSource.IsLocal)
+            {
+                throw new ArgumentException("PackageSource must be remote.", nameof(packageSource));
+            }
+
             Size = new Size(400, 300);
             MinimumSize = new Size(400, 300);
-            Text = $"Enter API key for: {packageSource.PackageSource.Name}";
+            Text = $"Enter API key for: {packageSource.Name}";
 
             _apiKeyTextBox = new TextBox
             {

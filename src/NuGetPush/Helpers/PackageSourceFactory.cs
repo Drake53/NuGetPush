@@ -5,6 +5,7 @@
 // </copyright>
 // ------------------------------------------------------------------------------
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -16,6 +17,16 @@ namespace NuGetPush.Helpers
 {
     public static class PackageSourceFactory
     {
+        public static List<PackageSource> GetPackageSources(string root)
+        {
+            var nuGetSettings = Settings.LoadDefaultSettings(root);
+
+            return PackageSourceProvider.LoadPackageSources(nuGetSettings)
+                .Where(packageSource => packageSource.IsEnabled)
+                .ToList();
+        }
+
+        [Obsolete]
         public static List<IPackageSource> GetPackageSources(ClassLibrary project)
         {
             var nuGetSettings = Settings.LoadDefaultSettings(project.ProjectDirectory);
@@ -26,6 +37,7 @@ namespace NuGetPush.Helpers
                 .ToList();
         }
 
+        [Obsolete]
         private static IPackageSource GetPackageSource(PackageSource packageSource, ClassLibrary project)
         {
             return packageSource.IsLocal

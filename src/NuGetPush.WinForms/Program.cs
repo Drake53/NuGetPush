@@ -9,9 +9,11 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
+using NuGetPush.Extensions;
 using NuGetPush.Helpers;
 using NuGetPush.Models;
 using NuGetPush.Processes;
@@ -188,25 +190,8 @@ namespace NuGetPush.WinForms
 
                 foreach (var project in projectBuildsSucceeded)
                 {
-                    var anyUploadSucceeded = false;
-                    foreach (var packageSource in project.PackageSources)
-                    {
-                        if (packageSource is LocalPackageSource localPackageSource)
-                        {
-                            if (!PackageSourceStoreProvider.PackageSourceStore.GetIsPackageSourceEnabled(packageSource))
-                            {
-                                continue;
-                            }
-
-                            var uploadSucceeded = await localPackageSource.UploadPackageAsync();
-                            if (uploadSucceeded)
-                            {
-                                anyUploadSucceeded = true;
-                            }
-                        }
-                    }
-
-                    if (anyUploadSucceeded)
+                    var uploadSucceeded = await project.LocalPackageSource.UploadPackageAsync(project);
+                    if (uploadSucceeded)
                     {
                         if (project.KnownLatestLocalVersion is null || project.PackageVersion > project.KnownLatestLocalVersion)
                         {
@@ -250,7 +235,7 @@ namespace NuGetPush.WinForms
         }
 
         /// <param name="force">
-        /// If <see langword="true"/>, projects that don't exist yet on the remote package source can be pushed as well.
+        /// If <see langword="true"/>, projects that don't exist yet on the remote package feed can be pushed as well.
         /// </param>
         private static async Task<HashSet<ClassLibrary>> PushProjectsAsync(IEnumerable<ClassLibrary> projectsToPush, bool force)
         {
@@ -270,25 +255,8 @@ namespace NuGetPush.WinForms
 
             foreach (var project in result)
             {
-                var anyUploadSucceeded = false;
-                foreach (var packageSource in project.PackageSources)
-                {
-                    if (packageSource is RemotePackageSource remotePackageSource)
-                    {
-                        if (!PackageSourceStoreProvider.PackageSourceStore.GetIsPackageSourceEnabled(packageSource))
-                        {
-                            continue;
-                        }
-
-                        var uploadSucceeded = await remotePackageSource.UploadPackageAsync();
-                        if (uploadSucceeded)
-                        {
-                            anyUploadSucceeded = true;
-                        }
-                    }
-                }
-
-                if (anyUploadSucceeded)
+                var uploadSucceeded = await project.RemotePackageSource.UploadPackageAsync(project);
+                if (uploadSucceeded)
                 {
                     if (project.KnownLatestNuGetVersion is null || project.PackageVersion > project.KnownLatestNuGetVersion)
                     {
@@ -359,6 +327,80 @@ namespace NuGetPush.WinForms
                 var uncommittedChanges = await Git.CheckUncommittedChangesAsync(repositoryRoot);
 
                 _solution = new Solution(repositoryRoot, fileInfo.FullName);
+
+                using var packageSourcesForm = new PackageSourcesForm(_solution.PackageSources);
+
+                const string JsonFileName = "packagesources.json";
+                var jsonFileInfo = new FileInfo(JsonFileName);
+
+                List<SolutionPackageSources>? packageSources = null;
+                if (jsonFileInfo.Exists)
+                {
+                    using var jsonFileStream = jsonFileInfo.OpenRead();
+                    try
+                    {
+                        packageSources = JsonSerializer.Deserialize<List<SolutionPackageSources>>(jsonFileStream);
+                    }
+                    catch
+                    {
+                    }
+                }
+
+                packageSources ??= new List<SolutionPackageSources>();
+
+                var solutionFilePath = Path.GetFullPath(fileInfo.FullName).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+                var solutionPackageSources = packageSources.FirstOrDefault(s => string.Equals(Path.GetFullPath(s.SolutionPath).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar), solutionFilePath, StringComparison.OrdinalIgnoreCase));
+
+                if (solutionPackageSources is not null)
+                {
+                    if (!string.IsNullOrEmpty(solutionPackageSources.LocalPackageSource))
+                    {
+                        packageSourcesForm.LocalPackageSource = _solution.PackageSources.FirstOrDefault(p => p.IsLocal && string.Equals(p.Source, solutionPackageSources.LocalPackageSource, StringComparison.OrdinalIgnoreCase));
+                    }
+
+                    if (!string.IsNullOrEmpty(solutionPackageSources.RemotePackageSource))
+                    {
+                        packageSourcesForm.RemotePackageSource = _solution.PackageSources.FirstOrDefault(p => !p.IsLocal && string.Equals(p.Source, solutionPackageSources.RemotePackageSource, StringComparison.OrdinalIgnoreCase));
+                    }
+                }
+                else
+                {
+                    solutionPackageSources = new SolutionPackageSources
+                    {
+                        SolutionPath = solutionFilePath,
+                    };
+
+                    packageSources.Add(solutionPackageSources);
+                }
+
+                var dialogResult = packageSourcesForm.ShowDialog();
+                if (dialogResult == DialogResult.OK)
+                {
+                    _solution.SelectedLocalPackageSource = packageSourcesForm.LocalPackageSource;
+                    _solution.SelectedRemotePackageSource = packageSourcesForm.RemotePackageSource;
+                }
+
+                if (_solution.SelectedLocalPackageSource is null ||
+                    _solution.SelectedRemotePackageSource is null)
+                {
+                    if (dialogResult == DialogResult.OK)
+                    {
+                        MessageBox.Show("You must select a local and a remote package source to use this program.", "No package sources selected", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+
+                    CloseSolution();
+
+                    return;
+                }
+
+                solutionPackageSources.LocalPackageSource = _solution.SelectedLocalPackageSource.Source;
+                solutionPackageSources.RemotePackageSource = _solution.SelectedRemotePackageSource.Source;
+
+                using (var jsonFileStream = jsonFileInfo.Create())
+                {
+                    JsonSerializer.Serialize(jsonFileStream, packageSources);
+                }
+
                 await _solution.ParseSolutionProjectsAsync(null, true);
 
                 var anyCanBePacked = false;

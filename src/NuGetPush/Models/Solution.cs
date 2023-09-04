@@ -16,8 +16,10 @@ using Microsoft.Build.Definition;
 using Microsoft.Build.Evaluation;
 using Microsoft.Build.Evaluation.Context;
 
+using NuGet.Configuration;
 using NuGet.Versioning;
 
+using NuGetPush.Helpers;
 using NuGetPush.Processes;
 
 namespace NuGetPush.Models
@@ -34,11 +36,19 @@ namespace NuGetPush.Models
             Name = solutionFileInfo.Name[..^4];
 
             _solutionFileName = solutionFileInfo.FullName;
+
+            PackageSources = PackageSourceFactory.GetPackageSources(solutionFileInfo.DirectoryName);
         }
 
         public string Name { get; init; }
 
         public string RepositoryRoot { get; init; }
+
+        public List<PackageSource> PackageSources { get; init; }
+
+        public PackageSource? SelectedLocalPackageSource { get; set; }
+
+        public PackageSource? SelectedRemotePackageSource { get; set; }
 
         public List<ClassLibrary> Projects { get; private set; }
 
@@ -51,6 +61,11 @@ namespace NuGetPush.Models
         public async Task ParseSolutionProjectsAsync(string? nuGetLocalPackageSource, bool checkDependencies)
         {
             if (Projects is not null || TestProjects is not null)
+            {
+                throw new InvalidOperationException();
+            }
+
+            if (SelectedLocalPackageSource is null || SelectedRemotePackageSource is null)
             {
                 throw new InvalidOperationException();
             }
@@ -93,7 +108,7 @@ namespace NuGetPush.Models
                 if (project.Properties.Any(property => property.Name == "OutputType" && property.EvaluatedValue == "Library") &&
                     project.Properties.Any(property => property.Name == "IsPackable" && property.EvaluatedValue == "true"))
                 {
-                    Projects.Add(new ClassLibrary(projectInSolution.ProjectName, projectInSolution.AbsolutePath, RepositoryRoot, project));
+                    Projects.Add(new ClassLibrary(projectInSolution.ProjectName, projectInSolution.AbsolutePath, RepositoryRoot, project, SelectedLocalPackageSource, SelectedRemotePackageSource));
                 }
                 else if (project.Items.Any(item => item.ItemType == "PackageReference"
                     && (item.EvaluatedInclude == "MSTest.TestFramework"

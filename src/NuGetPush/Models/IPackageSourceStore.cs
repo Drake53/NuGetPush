@@ -5,6 +5,7 @@
 // </copyright>
 // ------------------------------------------------------------------------------
 
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -15,18 +16,21 @@ namespace NuGetPush.Models
 {
     public interface IPackageSourceStore
     {
+        [Obsolete]
         bool GetOrAddIsPackageSourceEnabled(IPackageSource packageSource);
 
+        [Obsolete]
         bool GetIsPackageSourceEnabled(IPackageSource packageSource);
 
-        bool GetPackageSourceRequiresAuthentication(RemotePackageSource packageSource, out PackageSourceCredential? credentials);
+        bool GetPackageSourceRequiresAuthentication(PackageSource packageSource, out PackageSourceCredential? credentials);
 
-        bool SetPackageSourceRequiresAuthentication(RemotePackageSource packageSource, bool requiresAuthentication);
+        bool SetPackageSourceRequiresAuthentication(PackageSource packageSource, bool requiresAuthentication);
 
-        Task<FindPackageByIdResource> GetPackageByIdResourceAsync(RemotePackageSource packageSource, CancellationToken cancellationToken = default);
+        Task<FindPackageByIdResource> GetPackageByIdResourceAsync(PackageSource packageSource, CancellationToken cancellationToken = default);
 
-        string? GetOrAddApiKey(RemotePackageSource packageSource);
+        string? GetOrAddApiKey(PackageSource packageSource);
 
+        [Obsolete]
         void ResetPackageSourcesEnabled();
     }
 }

@@ -5,6 +5,7 @@
 // </copyright>
 // ------------------------------------------------------------------------------
 
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -13,6 +14,7 @@ using NuGet.Versioning;
 
 namespace NuGetPush.Models
 {
+    [Obsolete("Use PackageSourceExtensions")]
     public interface IPackageSource
     {
         PackageSource PackageSource { get; }

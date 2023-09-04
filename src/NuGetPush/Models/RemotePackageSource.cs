@@ -38,7 +38,7 @@ namespace NuGetPush.Models
 
         public async Task<NuGetVersion?> GetLatestNuGetVersionAsync(CancellationToken cancellationToken = default)
         {
-            var requiresAuthentication = PackageSourceStoreProvider.PackageSourceStore.GetPackageSourceRequiresAuthentication(this, out var credentials);
+            var requiresAuthentication = PackageSourceStoreProvider.PackageSourceStore.GetPackageSourceRequiresAuthentication(_packageSource, out var credentials);
             if (requiresAuthentication && credentials is null)
             {
                 return null;
@@ -48,7 +48,7 @@ namespace NuGetPush.Models
 
             try
             {
-                var packageByIdResource = await PackageSourceStoreProvider.PackageSourceStore.GetPackageByIdResourceAsync(this, cancellationToken);
+                var packageByIdResource = await PackageSourceStoreProvider.PackageSourceStore.GetPackageByIdResourceAsync(_packageSource, cancellationToken);
                 var packageVersions = await packageByIdResource.GetAllVersionsAsync(_project.PackageName, new SourceCacheContext(), NullLogger.Instance, cancellationToken);
                 return packageVersions.Max();
             }
@@ -57,7 +57,7 @@ namespace NuGetPush.Models
                 if (e.InnerException is HttpRequestException httpRequestException &&
                     httpRequestException.StatusCode == HttpStatusCode.Unauthorized)
                 {
-                    if (PackageSourceStoreProvider.PackageSourceStore.SetPackageSourceRequiresAuthentication(this, true))
+                    if (PackageSourceStoreProvider.PackageSourceStore.SetPackageSourceRequiresAuthentication(_packageSource, true))
                     {
                         return await GetLatestNuGetVersionAsync(cancellationToken);
                     }
@@ -101,7 +101,7 @@ namespace NuGetPush.Models
                 return DotNet.PushAsync(packageFilePath, _packageSource.Credentials.Password, _packageSource.Source, cancellationToken);
             }
 
-            var apiKey = PackageSourceStoreProvider.PackageSourceStore?.GetOrAddApiKey(this);
+            var apiKey = PackageSourceStoreProvider.PackageSourceStore?.GetOrAddApiKey(_packageSource);
             if (string.IsNullOrEmpty(apiKey))
             {
                 return Task.FromResult(false);

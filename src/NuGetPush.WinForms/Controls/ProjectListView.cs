@@ -121,7 +121,7 @@ namespace NuGetPush.WinForms.Controls
         {
             if (_solution is null)
             {
-                throw new InvalidOperationException();
+                return;
             }
 
             _solution = null;
