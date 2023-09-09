@@ -190,7 +190,7 @@ namespace NuGetPush.WinForms
 
                 foreach (var project in projectBuildsSucceeded)
                 {
-                    var uploadSucceeded = await project.LocalPackageSource.UploadPackageAsync(project);
+                    var uploadSucceeded = await project.LocalPackageSource.UploadPackageAsync(project, null);
                     if (uploadSucceeded)
                     {
                         if (project.KnownLatestLocalVersion is null || project.PackageVersion > project.KnownLatestLocalVersion)
@@ -255,7 +255,7 @@ namespace NuGetPush.WinForms
 
             foreach (var project in result)
             {
-                var uploadSucceeded = await project.RemotePackageSource.UploadPackageAsync(project);
+                var uploadSucceeded = await project.RemotePackageSource.UploadPackageAsync(project, HandleDeviceLogin);
                 if (uploadSucceeded)
                 {
                     if (project.KnownLatestNuGetVersion is null || project.PackageVersion > project.KnownLatestNuGetVersion)
@@ -280,6 +280,13 @@ namespace NuGetPush.WinForms
             }
 
             return result;
+        }
+
+        private static void HandleDeviceLogin(string deviceLoginLine)
+        {
+            using var deviceLoginForm = new DeviceLoginForm(deviceLoginLine);
+
+            deviceLoginForm.ShowDialog();
         }
 
         private static void UpdateDiagnosticsDisplay()

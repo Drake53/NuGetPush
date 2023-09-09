@@ -13,6 +13,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 
+using NuGetPush.Extensions;
 using NuGetPush.Models;
 
 namespace NuGetPush.Processes
@@ -80,16 +81,23 @@ namespace NuGetPush.Processes
         }
 
         // https://docs.microsoft.com/en-us/nuget/nuget-org/publish-a-package
-        public static async Task<bool> PushAsync(string fileName, string nuGetApiKey, string nuGetSource, CancellationToken cancellationToken = default)
+        public static async Task<bool> PushAsync(string fileName, string nuGetApiKey, string nuGetSource, Action<string> deviceLoginCallback, CancellationToken cancellationToken = default)
         {
             var processStartInfo = new ProcessStartInfo
             {
                 CreateNoWindow = true,
                 FileName = ProcessName,
-                Arguments = $"nuget push \"{fileName}\" --api-key \"{nuGetApiKey}\" --source \"{nuGetSource}\"",
+                Arguments = $"nuget push \"{fileName}\" --api-key \"{nuGetApiKey}\" --source \"{nuGetSource}\" --interactive",
+                RedirectStandardOutput = true,
             };
 
             using var dotnetPushProcess = Process.Start(processStartInfo);
+
+            if (dotnetPushProcess.StandardOutput.TryReadDeviceLogin(out var deviceLoginLine))
+            {
+                deviceLoginCallback.Invoke(deviceLoginLine);
+            }
+
             await dotnetPushProcess.WaitForExitAsync(cancellationToken);
 
             return dotnetPushProcess.ExitCode == 0;

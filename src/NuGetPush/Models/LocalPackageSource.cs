@@ -42,7 +42,7 @@ namespace NuGetPush.Models
             return Task.FromResult<NuGetVersion?>(null);
         }
 
-        public Task<bool> UploadPackageAsync(CancellationToken cancellationToken = default)
+        public Task<bool> UploadPackageAsync(Action<string>? deviceLoginCallback, CancellationToken cancellationToken = default)
         {
             var packageOutputPath = _project.PackageOutputPath;
             if (!Directory.Exists(packageOutputPath))

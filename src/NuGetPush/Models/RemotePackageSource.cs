@@ -67,7 +67,7 @@ namespace NuGetPush.Models
             }
         }
 
-        public Task<bool> UploadPackageAsync(CancellationToken cancellationToken = default)
+        public Task<bool> UploadPackageAsync(Action<string>? deviceLoginCallback, CancellationToken cancellationToken = default)
         {
             var packageOutputPath = _project.PackageOutputPath;
             if (!Directory.Exists(packageOutputPath))
@@ -98,7 +98,7 @@ namespace NuGetPush.Models
 
             if (_packageSource.Credentials is not null)
             {
-                return DotNet.PushAsync(packageFilePath, _packageSource.Credentials.Password, _packageSource.Source, cancellationToken);
+                return DotNet.PushAsync(packageFilePath, _packageSource.Credentials.Password, _packageSource.Source, deviceLoginCallback, cancellationToken);
             }
 
             var apiKey = PackageSourceStoreProvider.PackageSourceStore?.GetOrAddApiKey(_packageSource);
@@ -107,7 +107,7 @@ namespace NuGetPush.Models
                 return Task.FromResult(false);
             }
 
-            return DotNet.PushAsync(packageFilePath, apiKey, _packageSource.Source, cancellationToken);
+            return DotNet.PushAsync(packageFilePath, apiKey, _packageSource.Source, deviceLoginCallback, cancellationToken);
         }
     }
 }

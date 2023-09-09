@@ -78,6 +78,7 @@ namespace NuGetPush.Extensions
         public static Task<bool> UploadPackageAsync(
             this PackageSource packageSource,
             ClassLibrary classLibrary,
+            Action<string>? deviceLoginCallback,
             CancellationToken cancellationToken = default)
         {
             if (packageSource.IsLocal)
@@ -154,7 +155,7 @@ namespace NuGetPush.Extensions
 
                 if (packageSource.Credentials is not null)
                 {
-                    return DotNet.PushAsync(packageFilePath, packageSource.Credentials.Password, packageSource.Source, cancellationToken);
+                    return DotNet.PushAsync(packageFilePath, packageSource.Credentials.Password, packageSource.Source, deviceLoginCallback, cancellationToken);
                 }
 
                 var apiKey = PackageSourceStoreProvider.PackageSourceStore?.GetOrAddApiKey(packageSource);
@@ -163,7 +164,7 @@ namespace NuGetPush.Extensions
                     return Task.FromResult(false);
                 }
 
-                return DotNet.PushAsync(packageFilePath, apiKey, packageSource.Source, cancellationToken);
+                return DotNet.PushAsync(packageFilePath, apiKey, packageSource.Source, deviceLoginCallback, cancellationToken);
             }
         }
 
