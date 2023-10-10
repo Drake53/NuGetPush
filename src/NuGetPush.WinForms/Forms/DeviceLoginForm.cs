@@ -7,7 +7,9 @@
 
 using System;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Drawing;
+using System.Runtime.InteropServices;
 using System.Windows.Forms;
 
 using NuGetPush.WinForms.Extensions;
@@ -34,6 +36,11 @@ namespace NuGetPush.WinForms.Forms
                 DetectUrls = true,
             };
 
+            _deviceLoginTextBox.LinkClicked += (s, e) =>
+            {
+                OpenUrl(e.LinkText);
+            };
+
             _okButton = new Button
             {
                 Text = "OK",
@@ -47,6 +54,35 @@ namespace NuGetPush.WinForms.Forms
             };
 
             this.AddControls(_deviceLoginTextBox, _okButton);
+        }
+
+        // https://stackoverflow.com/a/43232486
+        private static void OpenUrl(string url)
+        {
+            try
+            {
+                Process.Start(url);
+            }
+            catch
+            {
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                {
+                    url = url.Replace("&", "^&", StringComparison.Ordinal);
+                    Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
+                }
+                else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                {
+                    Process.Start("xdg-open", url);
+                }
+                else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+                {
+                    Process.Start("open", url);
+                }
+                else
+                {
+                    throw;
+                }
+            }
         }
     }
 }
