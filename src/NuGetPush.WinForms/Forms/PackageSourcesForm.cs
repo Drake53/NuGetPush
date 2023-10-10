@@ -45,12 +45,12 @@ namespace NuGetPush.WinForms.Forms
 
             var localPackageSourcePathLabel = new Label
             {
-                Dock = DockStyle.Top,
+                Dock = DockStyle.Fill,
             };
 
             var remotePackageSourceUriLabel = new Label
             {
-                Dock = DockStyle.Top,
+                Dock = DockStyle.Fill,
             };
 
             foreach (var packageSource in packageSources)
