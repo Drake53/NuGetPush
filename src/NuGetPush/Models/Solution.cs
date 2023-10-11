@@ -82,7 +82,7 @@ namespace NuGetPush.Models
             var projectOptions = new ProjectOptions
             {
                 EvaluationContext = EvaluationContext.Create(EvaluationContext.SharingPolicy.Shared),
-                GlobalProperties = new Dictionary<string, string> { { "Configuration", "Release" }, { "PACK", "true" } },
+                GlobalProperties = new Dictionary<string, string> { { "Configuration", "Release" }, { "IsPublishBuild", "true" } },
                 LoadSettings = ProjectLoadSettings.Default,
                 ProjectCollection = projectCollection,
             };
