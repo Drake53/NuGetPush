@@ -1,0 +1,9 @@
+{
+  "solution": {
+    "path": "NuGetPush.sln",
+    "projects": [
+      "src\\NuGetPush.WinForms\\NuGetPush.WinForms.csproj",
+      "src\\NuGetPush\\NuGetPush.csproj"
+    ]
+  }
+}
