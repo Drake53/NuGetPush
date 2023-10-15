@@ -109,7 +109,9 @@ namespace NuGetPush.WinForms.Forms
                 };
                 openFileDialog.Filter = string.Join('|', new[]
                 {
+                    "Solution or Solution Filter|*.sln;*.slnf",
                     "Solution|*.sln",
+                    "Solution Filter|*.slnf",
                     "All files|*.*",
                 });
                 var openFileDialogResult = openFileDialog.ShowDialog();

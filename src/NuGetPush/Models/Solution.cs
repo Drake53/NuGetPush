@@ -58,7 +58,7 @@ namespace NuGetPush.Models
 
         public override string ToString() => Name;
 
-        public async Task ParseSolutionProjectsAsync(string? nuGetLocalPackageSource, bool checkDependencies)
+        public async Task ParseSolutionProjectsAsync(List<string>? solutionFilterProjects, string? nuGetLocalPackageSource, bool checkDependencies)
         {
             if (Projects is not null || TestProjects is not null)
             {
@@ -92,6 +92,24 @@ namespace NuGetPush.Models
                 if (projectInSolution.ProjectType == SolutionProjectType.SolutionFolder)
                 {
                     continue;
+                }
+
+                if (solutionFilterProjects is not null)
+                {
+                    var isProjectInSolutionFilter = false;
+                    foreach (var solutionFilterProject in solutionFilterProjects)
+                    {
+                        if (string.Equals(solutionFilterProject, projectInSolution.AbsolutePath, StringComparison.OrdinalIgnoreCase))
+                        {
+                            isProjectInSolutionFilter = true;
+                            break;
+                        }
+                    }
+
+                    if (!isProjectInSolutionFilter)
+                    {
+                        continue;
+                    }
                 }
 
                 Project project;

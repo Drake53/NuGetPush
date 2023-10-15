@@ -20,6 +20,7 @@ using NuGetPush.Processes;
 using NuGetPush.WinForms.Enums;
 using NuGetPush.WinForms.Extensions;
 using NuGetPush.WinForms.Forms;
+using NuGetPush.WinForms.Models;
 
 namespace NuGetPush.WinForms
 {
@@ -329,11 +330,28 @@ namespace NuGetPush.WinForms
                 _form.SolutionInputBrowseButton.Enabled = false;
                 _form.OpenCloseSolutionButton.Text = "Close solution";
 
-                var repositoryRoot = await Git.GetRepositoryRootAsync(fileInfo.DirectoryName);
+                FileInfo solutionFileInfo = fileInfo;
+                List<string>? solutionFilterProjects = null;
+                if (string.Equals(fileInfo.Extension, ".slnf", StringComparison.OrdinalIgnoreCase))
+                {
+                    using var solutionFilterFileStream = fileInfo.OpenRead();
+
+                    var options = new JsonSerializerOptions(JsonSerializerDefaults.General)
+                    {
+                        PropertyNameCaseInsensitive = true,
+                    };
+
+                    var solutionFilter = JsonSerializer.Deserialize<SolutionFilterFile>(solutionFilterFileStream, options);
+
+                    solutionFileInfo = new FileInfo(Path.Combine(fileInfo.DirectoryName, solutionFilter.Solution.Path));
+                    solutionFilterProjects = solutionFilter.Solution.Projects.Select(path => Path.GetFullPath(path, fileInfo.DirectoryName)).ToList();
+                }
+
+                var repositoryRoot = await Git.GetRepositoryRootAsync(solutionFileInfo.DirectoryName);
 
                 var uncommittedChanges = await Git.CheckUncommittedChangesAsync(repositoryRoot);
 
-                _solution = new Solution(repositoryRoot, fileInfo.FullName);
+                _solution = new Solution(repositoryRoot, solutionFileInfo.FullName);
 
                 using var packageSourcesForm = new PackageSourcesForm(_solution.PackageSources);
 
@@ -355,7 +373,7 @@ namespace NuGetPush.WinForms
 
                 packageSources ??= new List<SolutionPackageSources>();
 
-                var solutionFilePath = Path.GetFullPath(fileInfo.FullName).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+                var solutionFilePath = Path.GetFullPath(solutionFileInfo.FullName).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
                 var solutionPackageSources = packageSources.FirstOrDefault(s => string.Equals(Path.GetFullPath(s.SolutionPath).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar), solutionFilePath, StringComparison.OrdinalIgnoreCase));
 
                 if (solutionPackageSources is not null)
@@ -408,7 +426,7 @@ namespace NuGetPush.WinForms
                     JsonSerializer.Serialize(jsonFileStream, packageSources);
                 }
 
-                await _solution.ParseSolutionProjectsAsync(null, true);
+                await _solution.ParseSolutionProjectsAsync(solutionFilterProjects, null, true);
 
                 var anyCanBePacked = false;
                 var anyCanBePushed = false;
