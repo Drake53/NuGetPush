@@ -34,7 +34,7 @@ namespace NuGetPush.Models
             PackageName = project.GetPropertyValue("PackageId");
             PackageDescription = project.GetProperty("Description")?.EvaluatedValue ?? PackageName;
             PackageOutputPath = Path.Combine(ProjectDirectory, project.GetPropertyValue("PackageOutputPath"));
-            if (!project.ItemTypes.Contains("ProjectReference") && project.TryGetExplicitVersion(out var packageVersion))
+            if (!project.ItemTypes.Contains("ProjectReference") && this.TryGetExplicitVersion(out var packageVersion))
             {
                 PackageVersion = packageVersion;
             }
