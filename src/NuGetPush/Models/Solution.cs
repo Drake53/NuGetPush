@@ -141,13 +141,15 @@ namespace NuGetPush.Models
 
                 foreach (var testProject in TestProjects)
                 {
+                    var centralPackageVersions = PackageVersionHelper.GetCentrallyManagedPackageVersions(testProject.Project);
+
                     foreach (var packageReference in testProject.Project.Items.Where(item => item.ItemType == "PackageReference"))
                     {
                         var packageName = packageReference.EvaluatedInclude;
                         var packageProject = Projects.SingleOrDefault(packageProject => packageProject.PackageName == packageName);
                         if (packageProject is not null)
                         {
-                            var packageVersion = NuGetVersion.Parse(packageReference.Metadata.Single(metadata => metadata.Name == "Version").EvaluatedValue);
+                            var packageVersion = PackageVersionHelper.GetNuGetVersionFromPackageReference(packageReference, centralPackageVersions);
                             if (packageProject.PackageVersion != packageVersion)
                             {
                                 packageProject.MisconfiguredTestProjects.Add(testProject);

@@ -5,6 +5,7 @@
 // </copyright>
 // ------------------------------------------------------------------------------
 
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -16,6 +17,7 @@ using NuGet.Configuration;
 using NuGet.Versioning;
 
 using NuGetPush.Extensions;
+using NuGetPush.Helpers;
 
 namespace NuGetPush.Models
 {
@@ -105,6 +107,13 @@ namespace NuGetPush.Models
 
         public void FindDependencies(Solution solution)
         {
+            if (solution is null)
+            {
+                throw new ArgumentNullException(nameof(solution));
+            }
+
+            var centralPackageVersions = PackageVersionHelper.GetCentrallyManagedPackageVersions(Project);
+
             Dependencies = new();
             foreach (var packageReference in Project.GetItems("PackageReference"))
             {
@@ -112,11 +121,7 @@ namespace NuGetPush.Models
                 var packageProject = solution.Projects.SingleOrDefault(packageProject => packageProject.PackageName == packageName);
                 if (packageProject is not null)
                 {
-                    var version = packageReference.GetMetadata("Version");
-                    if (!NuGetVersion.TryParse(version.EvaluatedValue, out var packageVersion))
-                    {
-                        throw new InvalidDataException($"Package version '{version.EvaluatedValue}' ({version.UnevaluatedValue}) is invalid.");
-                    }
+                    PackageVersionHelper.GetNuGetVersionFromPackageReference(packageReference, centralPackageVersions);
 
                     Dependencies.Add(packageProject);
                 }
