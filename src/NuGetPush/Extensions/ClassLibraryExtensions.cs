@@ -7,6 +7,7 @@
 
 using System;
 using System.Diagnostics.CodeAnalysis;
+using System.IO;
 
 using NuGet.Versioning;
 
@@ -43,10 +44,16 @@ namespace NuGetPush.Extensions
 
             if (project.Project.Targets.ContainsKey("SetProjectVersionsFromCentralPackageManagement"))
             {
-                var centralPackageVersions = PackageVersionHelper.GetCentrallyManagedPackageVersions(project.Project);
-                if (centralPackageVersions is not null)
+                try
                 {
-                    return centralPackageVersions.TryGetValue(project.PackageName, out nuGetVersion);
+                    var centralPackageVersions = PackageVersionHelper.GetCentrallyManagedPackageVersions(project.Project);
+                    if (centralPackageVersions is not null)
+                    {
+                        return centralPackageVersions.TryGetValue(project.PackageName, out nuGetVersion);
+                    }
+                }
+                catch (InvalidDataException)
+                {
                 }
             }
 

@@ -141,7 +141,17 @@ namespace NuGetPush.Models
 
                 foreach (var testProject in TestProjects)
                 {
-                    var centralPackageVersions = PackageVersionHelper.GetCentrallyManagedPackageVersions(testProject.Project);
+                    Dictionary<string, NuGetVersion>? centralPackageVersions = null;
+                    var error = false;
+
+                    try
+                    {
+                        centralPackageVersions = PackageVersionHelper.GetCentrallyManagedPackageVersions(testProject.Project);
+                    }
+                    catch (InvalidDataException)
+                    {
+                        error = true;
+                    }
 
                     foreach (var packageReference in testProject.Project.Items.Where(item => item.ItemType == "PackageReference"))
                     {
@@ -149,14 +159,28 @@ namespace NuGetPush.Models
                         var packageProject = Projects.SingleOrDefault(packageProject => packageProject.PackageName == packageName);
                         if (packageProject is not null)
                         {
-                            var packageVersion = PackageVersionHelper.GetNuGetVersionFromPackageReference(packageReference, centralPackageVersions);
-                            if (packageProject.PackageVersion != packageVersion)
+                            if (error)
                             {
                                 packageProject.MisconfiguredTestProjects.Add(testProject);
                             }
                             else
                             {
-                                packageProject.TestProjects.Add(testProject);
+                                try
+                                {
+                                    var packageVersion = PackageVersionHelper.GetNuGetVersionFromPackageReference(packageReference, centralPackageVersions);
+                                    if (packageProject.PackageVersion != packageVersion)
+                                    {
+                                        packageProject.MisconfiguredTestProjects.Add(testProject);
+                                    }
+                                    else
+                                    {
+                                        packageProject.TestProjects.Add(testProject);
+                                    }
+                                }
+                                catch (InvalidDataException)
+                                {
+                                    packageProject.MisconfiguredTestProjects.Add(testProject);
+                                }
                             }
                         }
                     }

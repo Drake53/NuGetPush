@@ -112,7 +112,15 @@ namespace NuGetPush.Models
                 throw new ArgumentNullException(nameof(solution));
             }
 
-            var centralPackageVersions = PackageVersionHelper.GetCentrallyManagedPackageVersions(Project);
+            Dictionary<string, NuGetVersion>? centralPackageVersions;
+            try
+            {
+                centralPackageVersions = PackageVersionHelper.GetCentrallyManagedPackageVersions(Project);
+            }
+            catch (InvalidDataException)
+            {
+                return;
+            }
 
             var dependencies = new HashSet<ClassLibrary>();
             foreach (var packageReference in Project.GetItems("PackageReference"))
