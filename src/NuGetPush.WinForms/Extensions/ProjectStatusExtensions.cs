@@ -25,7 +25,7 @@ namespace NuGetPush.WinForms.Extensions
                 ProjectStatus.Packed => force,
                 ProjectStatus.Pushed => force,
                 ProjectStatus.TestFailed => force,
-                ProjectStatus.DependencyError => force,
+                ProjectStatus.DependencyError => false,
                 ProjectStatus.PushError => force,
                 ProjectStatus.PackError => force,
                 ProjectStatus.ParseError => false,

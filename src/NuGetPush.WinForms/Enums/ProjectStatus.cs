@@ -60,7 +60,7 @@ namespace NuGetPush.WinForms.Enums
         TestFailed,
 
         /// <summary>
-        /// One or more dependencies for this project have an error.
+        /// One or more dependencies for this project have an error (during build) or an exception occured during <see cref="Models.ClassLibrary.FindDependencies(Models.Solution)"/>.
         /// </summary>
         DependencyError,
 

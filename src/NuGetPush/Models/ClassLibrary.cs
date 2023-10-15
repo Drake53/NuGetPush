@@ -71,7 +71,7 @@ namespace NuGetPush.Models
 
         public NuGetVersion? KnownLatestNuGetVersion { get; set; }
 
-        public HashSet<ClassLibrary> Dependencies { get; private set; }
+        public HashSet<ClassLibrary>? Dependencies { get; private set; }
 
         public HashSet<ClassLibrary> Dependees { get; private set; }
 
@@ -114,18 +114,27 @@ namespace NuGetPush.Models
 
             var centralPackageVersions = PackageVersionHelper.GetCentrallyManagedPackageVersions(Project);
 
-            Dependencies = new();
+            var dependencies = new HashSet<ClassLibrary>();
             foreach (var packageReference in Project.GetItems("PackageReference"))
             {
                 var packageName = packageReference.EvaluatedInclude;
                 var packageProject = solution.Projects.SingleOrDefault(packageProject => packageProject.PackageName == packageName);
                 if (packageProject is not null)
                 {
-                    PackageVersionHelper.GetNuGetVersionFromPackageReference(packageReference, centralPackageVersions);
+                    try
+                    {
+                        _ = PackageVersionHelper.GetNuGetVersionFromPackageReference(packageReference, centralPackageVersions);
 
-                    Dependencies.Add(packageProject);
+                        dependencies.Add(packageProject);
+                    }
+                    catch (InvalidDataException)
+                    {
+                        return;
+                    }
                 }
             }
+
+            Dependencies = dependencies;
         }
 
         public void FindDependees(Solution solution)
@@ -133,7 +142,7 @@ namespace NuGetPush.Models
             Dependees = new();
             foreach (var project in solution.Projects)
             {
-                if (project.Dependencies.Contains(this))
+                if (project.Dependencies is not null && project.Dependencies.Contains(this))
                 {
                     Dependees.Add(project);
                 }

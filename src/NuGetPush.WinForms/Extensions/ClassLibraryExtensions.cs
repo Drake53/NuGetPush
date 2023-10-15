@@ -47,6 +47,11 @@ namespace NuGetPush.WinForms.Extensions
                 return ProjectStatus.NotReady;
             }
 
+            if (project.Dependencies is null)
+            {
+                return ProjectStatus.DependencyError;
+            }
+
             if (project.PackageVersion < project.KnownLatestLocalVersion || project.PackageVersion < project.KnownLatestNuGetVersion)
             {
                 return ProjectStatus.Outdated;
