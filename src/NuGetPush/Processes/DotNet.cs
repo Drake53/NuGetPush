@@ -6,10 +6,9 @@
 // ------------------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
 using System.Linq;
-using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -41,13 +40,29 @@ namespace NuGetPush.Processes
             using var dotnetListSdksProcess = Process.Start(processStartInfo);
             await dotnetListSdksProcess.WaitForExitAsync();
 
-            var output = await dotnetListSdksProcess.StandardOutput.ReadToEndAsync();
-            var sdkPaths = Regex.Matches(output, "([0-9]+.[0-9]+.[0-9]+) \\[(.*)\\]")
-                .OfType<Match>()
-                .Select(match => Path.Combine(match.Groups[2].Value, match.Groups[1].Value, "MSBuild.dll"));
+            var sdks = new List<DotNetSdk>();
+            var prefix = $"{Environment.Version.ToString(2)}.";
 
-            var sdkPath = sdkPaths.Last();
-            Environment.SetEnvironmentVariable("MSBUILD_EXE_PATH", sdkPath);
+            while (true)
+            {
+                var line = await dotnetListSdksProcess.StandardOutput.ReadLineAsync();
+                if (line is null)
+                {
+                    break;
+                }
+
+                if (line.StartsWith(prefix, StringComparison.Ordinal))
+                {
+                    sdks.Add(DotNetSdk.Parse(line));
+                }
+            }
+
+            if (sdks.Count == 0)
+            {
+                throw new InvalidOperationException($"No .NET SDK found which matches the current runtime version '{Environment.Version}'.");
+            }
+
+            Environment.SetEnvironmentVariable("MSBUILD_EXE_PATH", sdks.OrderByDescending(sdk => sdk.SdkVersion).First().MSBuildPath);
         }
 
         public static async Task<bool> PackAsync(ClassLibrary project)
