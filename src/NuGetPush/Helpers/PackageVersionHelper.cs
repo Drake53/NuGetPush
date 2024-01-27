@@ -17,14 +17,14 @@ namespace NuGetPush.Helpers
 {
     internal static class PackageVersionHelper
     {
-        public static Dictionary<string, NuGetVersion>? GetCentrallyManagedPackageVersions(Project project)
+        public static Dictionary<string, VersionRange>? GetCentrallyManagedPackageVersions(Project project)
         {
             if (project.GetProperty("ManagePackageVersionsCentrally")?.EvaluatedValue != "true")
             {
                 return null;
             }
 
-            var result = new Dictionary<string, NuGetVersion>(StringComparer.Ordinal);
+            var result = new Dictionary<string, VersionRange>(StringComparer.Ordinal);
             foreach (var packageVersion in project.GetItems("PackageVersion"))
             {
                 var version = packageVersion.GetMetadata("Version");
@@ -33,20 +33,20 @@ namespace NuGetPush.Helpers
                     throw new InvalidDataException($"Package version is missing. (Project = {Path.GetFileNameWithoutExtension(project.FullPath)}, Package = {packageVersion.EvaluatedInclude})");
                 }
 
-                if (!NuGetVersion.TryParse(version.EvaluatedValue, out var nuGetVersion))
+                if (!VersionRange.TryParse(version.EvaluatedValue, out var versionRange))
                 {
                     throw new InvalidDataException($"Package version '{version.EvaluatedValue}' ({version.UnevaluatedValue}) is invalid. (Project = {Path.GetFileNameWithoutExtension(project.FullPath)}, Package = {packageVersion.EvaluatedInclude})");
                 }
 
-                result.Add(packageVersion.EvaluatedInclude, nuGetVersion);
+                result.Add(packageVersion.EvaluatedInclude, versionRange);
             }
 
             return result;
         }
 
-        public static NuGetVersion GetNuGetVersionFromPackageReference(
+        public static VersionRange GetVersionFromPackageReference(
             ProjectItem packageReference,
-            Dictionary<string, NuGetVersion>? centralPackageVersions)
+            Dictionary<string, VersionRange>? centralPackageVersions)
         {
             var packageName = packageReference.EvaluatedInclude;
 
@@ -73,7 +73,7 @@ namespace NuGetPush.Helpers
                     throw new InvalidDataException($"Package version is missing. (Package = {packageName})");
                 }
 
-                if (!NuGetVersion.TryParse(version.EvaluatedValue, out var result))
+                if (!VersionRange.TryParse(version.EvaluatedValue, out var result))
                 {
                     throw new InvalidDataException($"Package version '{version.EvaluatedValue}' ({version.UnevaluatedValue}) is invalid. (Package = {packageName})");
                 }

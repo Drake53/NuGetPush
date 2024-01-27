@@ -117,7 +117,7 @@ namespace NuGetPush.Models
                 throw new ArgumentNullException(nameof(solution));
             }
 
-            Dictionary<string, NuGetVersion>? centralPackageVersions;
+            Dictionary<string, VersionRange>? centralPackageVersions;
             try
             {
                 centralPackageVersions = PackageVersionHelper.GetCentrallyManagedPackageVersions(Project);
@@ -136,7 +136,11 @@ namespace NuGetPush.Models
                 {
                     try
                     {
-                        _ = PackageVersionHelper.GetNuGetVersionFromPackageReference(packageReference, centralPackageVersions);
+                        var versionRange = PackageVersionHelper.GetVersionFromPackageReference(packageReference, centralPackageVersions);
+                        if (!versionRange.Satisfies(packageProject.PackageVersion))
+                        {
+                            return;
+                        }
 
                         dependencies.Add(packageProject);
                     }

@@ -159,7 +159,7 @@ namespace NuGetPush.Models
 
                 foreach (var testProject in TestProjects)
                 {
-                    Dictionary<string, NuGetVersion>? centralPackageVersions = null;
+                    Dictionary<string, VersionRange>? centralPackageVersions = null;
                     var error = false;
 
                     try
@@ -185,8 +185,8 @@ namespace NuGetPush.Models
                             {
                                 try
                                 {
-                                    var packageVersion = PackageVersionHelper.GetNuGetVersionFromPackageReference(packageReference, centralPackageVersions);
-                                    if (packageProject.PackageVersion != packageVersion)
+                                    var versionRange = PackageVersionHelper.GetVersionFromPackageReference(packageReference, centralPackageVersions);
+                                    if (!versionRange.Satisfies(packageProject.PackageVersion))
                                     {
                                         packageProject.MisconfiguredTestProjects.Add(testProject);
                                     }

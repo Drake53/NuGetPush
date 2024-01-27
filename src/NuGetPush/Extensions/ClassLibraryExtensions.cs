@@ -47,9 +47,10 @@ namespace NuGetPush.Extensions
                 try
                 {
                     var centralPackageVersions = PackageVersionHelper.GetCentrallyManagedPackageVersions(project.Project);
-                    if (centralPackageVersions is not null)
+                    if (centralPackageVersions is not null &&
+                        centralPackageVersions.TryGetValue(project.PackageName, out var versionRange))
                     {
-                        return centralPackageVersions.TryGetValue(project.PackageName, out nuGetVersion);
+                        return NuGetVersion.TryParse(versionRange.OriginalString, out nuGetVersion);
                     }
                 }
                 catch (InvalidDataException)
