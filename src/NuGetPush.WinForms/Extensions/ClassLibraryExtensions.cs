@@ -35,6 +35,11 @@ namespace NuGetPush.WinForms.Extensions
 
         public static bool CanPush(this ClassLibrary project, bool force)
         {
+            if (project.RemotePackageSource is null)
+            {
+                return false;
+            }
+
             return force
                 ? project.PackageVersion is not null && (project.KnownLatestNuGetVersion is null || project.PackageVersion > project.KnownLatestNuGetVersion)
                 : project.PackageVersion is not null && project.KnownLatestNuGetVersion is not null && project.PackageVersion > project.KnownLatestNuGetVersion;

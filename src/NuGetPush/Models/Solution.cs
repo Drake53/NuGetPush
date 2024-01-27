@@ -65,7 +65,7 @@ namespace NuGetPush.Models
                 throw new InvalidOperationException();
             }
 
-            if (SelectedLocalPackageSource is null || SelectedRemotePackageSource is null)
+            if (SelectedLocalPackageSource is null)
             {
                 throw new InvalidOperationException();
             }

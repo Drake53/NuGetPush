@@ -8,7 +8,7 @@ This tool requires that you have a local package source defined in your nuget.co
 The local package source will contain your .nupkg files, and allows you to pack projects with dependencies without first having to upload those dependencies.
 More information about the nuget.config file: https://learn.microsoft.com/en-us/nuget/consume-packages/configuring-nuget-behavior
 
-When you open a solution, you must first choose the local and remote package source.
+When you open a solution, you must first choose a local and optionally a remote package source.
 This choice will be remembered per solution in the packagesources.json file.
 
 When opening the solution, you will see a list of class library projects, each showing up to three versions:

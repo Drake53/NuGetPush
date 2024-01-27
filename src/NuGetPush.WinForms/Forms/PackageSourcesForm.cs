@@ -14,6 +14,7 @@ using System.Windows.Forms;
 using NuGet.Configuration;
 
 using NuGetPush.WinForms.Extensions;
+using NuGetPush.WinForms.Models;
 
 namespace NuGetPush.WinForms.Forms
 {
@@ -65,6 +66,8 @@ namespace NuGetPush.WinForms.Forms
                 }
             }
 
+            _remotePackageSourcesComboBox.Items.Add(NoPackageSource.Instance);
+
             _localPackageSourcesComboBox.SelectedIndexChanged += (s, e) =>
             {
                 if (_localPackageSourcesComboBox.SelectedItem is PackageSource packageSource)
@@ -82,6 +85,10 @@ namespace NuGetPush.WinForms.Forms
                 if (_remotePackageSourcesComboBox.SelectedItem is PackageSource packageSource)
                 {
                     remotePackageSourceUriLabel.Text = packageSource.Source;
+                }
+                else if (_remotePackageSourcesComboBox.SelectedItem is NoPackageSource noPackageSource)
+                {
+                    remotePackageSourceUriLabel.Text = noPackageSource.Description;
                 }
                 else
                 {
@@ -158,26 +165,33 @@ namespace NuGetPush.WinForms.Forms
             }
         }
 
-        public PackageSource? RemotePackageSource
+        public object? RemotePackageSource
         {
-            get => _remotePackageSourcesComboBox.SelectedItem as PackageSource;
+            get => _remotePackageSourcesComboBox.SelectedItem;
             set
             {
-                if (value is null)
+                if (value is NoPackageSource)
                 {
-                    _remotePackageSourcesComboBox.SelectedIndex = -1;
+                    _remotePackageSourcesComboBox.SelectedItem = value;
                 }
-                else if (value.IsLocal)
+                else if (value is PackageSource packageSource)
                 {
-                    throw new ArgumentException("Package source must be remote.", nameof(value));
-                }
-                else if (!_remotePackageSourcesComboBox.Items.Contains(value))
-                {
-                    throw new ArgumentException("Remote package source not found in list.", nameof(value));
+                    if (packageSource.IsLocal)
+                    {
+                        throw new ArgumentException("Package source must be remote.", nameof(value));
+                    }
+                    else if (!_remotePackageSourcesComboBox.Items.Contains(packageSource))
+                    {
+                        throw new ArgumentException("Remote package source not found in list.", nameof(value));
+                    }
+                    else
+                    {
+                        _remotePackageSourcesComboBox.SelectedItem = value;
+                    }
                 }
                 else
                 {
-                    _remotePackageSourcesComboBox.SelectedItem = value;
+                    _remotePackageSourcesComboBox.SelectedIndex = -1;
                 }
             }
         }

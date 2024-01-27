@@ -13,6 +13,8 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
+using NuGet.Configuration;
+
 using NuGetPush.Extensions;
 using NuGetPush.Helpers;
 using NuGetPush.Models;
@@ -256,7 +258,7 @@ namespace NuGetPush.WinForms
 
             foreach (var project in result)
             {
-                var uploadSucceeded = await project.RemotePackageSource.UploadPackageAsync(project, HandleDeviceLogin);
+                var uploadSucceeded = project.RemotePackageSource is not null && await project.RemotePackageSource.UploadPackageAsync(project, HandleDeviceLogin);
                 if (uploadSucceeded)
                 {
                     if (project.KnownLatestNuGetVersion is null || project.PackageVersion > project.KnownLatestNuGetVersion)
@@ -387,6 +389,10 @@ namespace NuGetPush.WinForms
                     {
                         packageSourcesForm.RemotePackageSource = _solution.PackageSources.FirstOrDefault(p => !p.IsLocal && string.Equals(p.Source, solutionPackageSources.RemotePackageSource, StringComparison.OrdinalIgnoreCase));
                     }
+                    else if (!string.IsNullOrEmpty(solutionPackageSources.LocalPackageSource))
+                    {
+                        packageSourcesForm.RemotePackageSource = NoPackageSource.Instance;
+                    }
                 }
                 else
                 {
@@ -399,27 +405,28 @@ namespace NuGetPush.WinForms
                 }
 
                 var dialogResult = packageSourcesForm.ShowDialog();
-                if (dialogResult == DialogResult.OK)
+                if (dialogResult != DialogResult.OK)
                 {
-                    _solution.SelectedLocalPackageSource = packageSourcesForm.LocalPackageSource;
-                    _solution.SelectedRemotePackageSource = packageSourcesForm.RemotePackageSource;
+                    CloseSolution();
+
+                    return;
                 }
 
-                if (_solution.SelectedLocalPackageSource is null ||
-                    _solution.SelectedRemotePackageSource is null)
+                if (packageSourcesForm.LocalPackageSource is null ||
+                    packageSourcesForm.RemotePackageSource is null)
                 {
-                    if (dialogResult == DialogResult.OK)
-                    {
-                        MessageBox.Show("You must select a local and a remote package source to use this program.", "No package sources selected", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    }
+                    MessageBox.Show("You must select a local and a remote package source to use this program.", "No package sources selected", MessageBoxButtons.OK, MessageBoxIcon.Error);
 
                     CloseSolution();
 
                     return;
                 }
 
+                _solution.SelectedLocalPackageSource = packageSourcesForm.LocalPackageSource;
+                _solution.SelectedRemotePackageSource = packageSourcesForm.RemotePackageSource as PackageSource;
+
                 solutionPackageSources.LocalPackageSource = _solution.SelectedLocalPackageSource.Source;
-                solutionPackageSources.RemotePackageSource = _solution.SelectedRemotePackageSource.Source;
+                solutionPackageSources.RemotePackageSource = _solution.SelectedRemotePackageSource?.Source;
 
                 using (var jsonFileStream = jsonFileInfo.Create())
                 {

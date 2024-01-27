@@ -23,7 +23,7 @@ namespace NuGetPush.Models
 {
     public class ClassLibrary
     {
-        public ClassLibrary(string name, string projectPath, string repositoryRoot, Project project, PackageSource localPackageSource, PackageSource remotePackageSource)
+        public ClassLibrary(string name, string projectPath, string repositoryRoot, Project project, PackageSource localPackageSource, PackageSource? remotePackageSource)
         {
             Name = name;
             ProjectPath = projectPath;
@@ -61,7 +61,7 @@ namespace NuGetPush.Models
 
         public PackageSource LocalPackageSource { get; }
 
-        public PackageSource RemotePackageSource { get; }
+        public PackageSource? RemotePackageSource { get; }
 
         public NuGetVersion? PackageVersion { get; init; }
 
@@ -88,6 +88,11 @@ namespace NuGetPush.Models
 
             foreach (var packageSource in new[] { LocalPackageSource, RemotePackageSource })
             {
+                if (packageSource is null)
+                {
+                    continue;
+                }
+
                 var latestVersionFromSource = await packageSource.GetLatestNuGetVersionAsync(this);
                 if (packageSource.IsLocal)
                 {

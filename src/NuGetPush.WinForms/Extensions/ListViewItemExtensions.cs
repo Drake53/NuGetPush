@@ -28,7 +28,7 @@ namespace NuGetPush.WinForms.Extensions
                 tag.ClassLibrary.Name,
                 tag.ClassLibrary.PackageVersion?.ToNormalizedString() ?? string.Empty,
                 string.Empty,
-                string.Empty,
+                tag.ClassLibrary.RemotePackageSource is null ? "Offline" : string.Empty,
             });
 
             item.Tag = tag;
@@ -57,7 +57,11 @@ namespace NuGetPush.WinForms.Extensions
             item.ImageIndex = (int)tag.Status;
             item.SubItems[StatusColumnIndex].Text = tag.Status.ToString();
             item.SubItems[LocalVersionColumnIndex].Text = tag.ClassLibrary.KnownLatestLocalVersion?.ToString() ?? string.Empty;
-            item.SubItems[NuGetVersionColumnIndex].Text = tag.ClassLibrary.KnownLatestNuGetVersion?.ToString() ?? string.Empty;
+
+            if (tag.ClassLibrary.RemotePackageSource is not null)
+            {
+                item.SubItems[NuGetVersionColumnIndex].Text = tag.ClassLibrary.KnownLatestNuGetVersion?.ToString() ?? string.Empty;
+            }
         }
 
         public static int CompareTo(this ListViewItem item, ListViewItem other, int column)
