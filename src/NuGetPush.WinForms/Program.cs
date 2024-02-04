@@ -342,7 +342,10 @@ namespace NuGetPush.WinForms
 
             _form.ProjectListView.Sort();
 
-            await _form.ProjectListView.UpdateContextMenuAsync();
+            var uncommittedChanges = await Git.CheckUncommittedChangesAsync(_solution.RepositoryRoot);
+
+            _form.ProjectListView.UpdateContextMenu(uncommittedChanges);
+            UpdateWorkButtonsEnabled(uncommittedChanges);
         }
 
         private static async Task OpenSolutionAsync()
@@ -457,10 +460,6 @@ namespace NuGetPush.WinForms
 
                 await _solution.ParseSolutionProjectsAsync(solutionFilterProjects, null, true);
 
-                var anyCanBePacked = false;
-                var anyCanBePushed = false;
-                var anyCanBePackedAndPushed = false;
-
                 var index = 0;
                 foreach (var project in _solution.Projects.OrderBy(project => project.Name))
                 {
@@ -468,30 +467,43 @@ namespace NuGetPush.WinForms
 
                     var tag = new ItemTag(project, index++);
                     _form.ProjectListView.Items.Add(ListViewItemExtensions.Create(tag));
-
-                    var canPush = tag.ClassLibrary.CanPush(false);
-
-                    if (project.CanPack(uncommittedChanges, false))
-                    {
-                        anyCanBePacked = true;
-                        if (canPush)
-                        {
-                            anyCanBePackedAndPushed = true;
-                        }
-                    }
-
-                    if (canPush)
-                    {
-                        anyCanBePushed = true;
-                    }
                 }
 
                 _form.ProjectListView.LoadSolution(_solution);
 
-                _form.PackAllButton.Enabled = anyCanBePacked;
-                _form.PushAllButton.Enabled = anyCanBePushed;
-                _form.PackAndPushAllButton.Enabled = anyCanBePackedAndPushed;
+                UpdateWorkButtonsEnabled(uncommittedChanges);
             }
+        }
+
+        private static void UpdateWorkButtonsEnabled(HashSet<string> uncommittedChanges)
+        {
+            var anyCanBePacked = false;
+            var anyCanBePushed = false;
+            var anyCanBePackedAndPushed = false;
+
+            foreach (ListViewItem item in _form.ProjectListView.Items)
+            {
+                var project = item.GetTag().ClassLibrary;
+                var canPush = project.CanPush(false);
+
+                if (project.CanPack(uncommittedChanges, false))
+                {
+                    anyCanBePacked = true;
+                    if (canPush)
+                    {
+                        anyCanBePackedAndPushed = true;
+                    }
+                }
+
+                if (canPush)
+                {
+                    anyCanBePushed = true;
+                }
+            }
+
+            _form.PackAllButton.Enabled = anyCanBePacked;
+            _form.PushAllButton.Enabled = anyCanBePushed;
+            _form.PackAndPushAllButton.Enabled = anyCanBePackedAndPushed;
         }
 
         private static void CloseSolution()

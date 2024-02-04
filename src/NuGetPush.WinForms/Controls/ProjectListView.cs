@@ -140,7 +140,7 @@ namespace NuGetPush.WinForms.Controls
             _packAndPushContextButton.Enabled = false;
         }
 
-        internal async Task UpdateContextMenuAsync()
+        internal void UpdateContextMenu(HashSet<string> uncommittedChanges)
         {
             DisableContextMenuButtons();
 
@@ -151,8 +151,6 @@ namespace NuGetPush.WinForms.Controls
 
             if (this.TryGetSelectedItemTags(out var tags))
             {
-                var uncommittedChanges = await Git.CheckUncommittedChangesAsync(_solution.RepositoryRoot);
-
                 foreach (var tag in tags)
                 {
                     var project = tag.ClassLibrary;
@@ -169,6 +167,13 @@ namespace NuGetPush.WinForms.Controls
                     }
                 }
             }
+        }
+
+        private async Task UpdateContextMenuAsync()
+        {
+            var uncommittedChanges = await Git.CheckUncommittedChangesAsync(_solution.RepositoryRoot);
+
+            UpdateContextMenu(uncommittedChanges);
         }
     }
 }
