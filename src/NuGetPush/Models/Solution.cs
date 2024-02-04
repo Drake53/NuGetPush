@@ -160,15 +160,15 @@ namespace NuGetPush.Models
                 foreach (var testProject in TestProjects)
                 {
                     Dictionary<string, VersionRange>? centralPackageVersions = null;
-                    var error = false;
+                    InvalidDataException? exception = null;
 
                     try
                     {
                         centralPackageVersions = PackageVersionHelper.GetCentrallyManagedPackageVersions(testProject.Project);
                     }
-                    catch (InvalidDataException)
+                    catch (InvalidDataException e)
                     {
-                        error = true;
+                        exception = e;
                     }
 
                     foreach (var packageReference in testProject.Project.Items.Where(item => item.ItemType == "PackageReference"))
@@ -177,8 +177,10 @@ namespace NuGetPush.Models
                         var packageProject = Projects.SingleOrDefault(packageProject => packageProject.PackageName == packageName);
                         if (packageProject is not null)
                         {
-                            if (error)
+                            if (exception is not null)
                             {
+                                packageProject.Diagnostics.Add(exception.Message);
+
                                 packageProject.MisconfiguredTestProjects.Add(testProject);
                             }
                             else
@@ -188,6 +190,8 @@ namespace NuGetPush.Models
                                     var versionRange = PackageVersionHelper.GetVersionFromPackageReference(packageReference, centralPackageVersions);
                                     if (!versionRange.Satisfies(packageProject.PackageVersion))
                                     {
+                                        packageProject.Diagnostics.Add($"Test project \"{testProject.Name}\" depends on version \"{versionRange.OriginalString}\".");
+
                                         packageProject.MisconfiguredTestProjects.Add(testProject);
                                     }
                                     else
@@ -195,8 +199,10 @@ namespace NuGetPush.Models
                                         packageProject.TestProjects.Add(testProject);
                                     }
                                 }
-                                catch (InvalidDataException)
+                                catch (InvalidDataException e)
                                 {
+                                    packageProject.Diagnostics.Add(e.Message);
+
                                     packageProject.MisconfiguredTestProjects.Add(testProject);
                                 }
                             }

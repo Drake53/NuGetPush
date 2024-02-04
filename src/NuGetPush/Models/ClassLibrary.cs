@@ -34,7 +34,16 @@ namespace NuGetPush.Models
             PackageName = project.GetPropertyValue("PackageId");
             PackageDescription = project.GetProperty("Description")?.EvaluatedValue ?? PackageName;
             PackageOutputPath = Path.Combine(ProjectDirectory, project.GetPropertyValue("PackageOutputPath"));
-            if (!project.ItemTypes.Contains("ProjectReference") && this.TryGetExplicitVersion(out var packageVersion))
+
+            if (project.ItemTypes.Contains("ProjectReference"))
+            {
+                Diagnostics.Add(string.Join(Environment.NewLine, project.GetItems("ProjectReference").Select(projectReference => $"\"{projectReference.EvaluatedInclude}\"").Prepend("Project references are not allowed:")));
+            }
+            else if (!this.TryGetExplicitVersion(out var packageVersion))
+            {
+                Diagnostics.Add("Project is lacking a (Package)Version property.");
+            }
+            else
             {
                 PackageVersion = packageVersion;
             }
@@ -56,6 +65,8 @@ namespace NuGetPush.Models
         public string PackageName { get; init; }
 
         public string PackageDescription { get; init; }
+
+        public List<string> Diagnostics { get; } = new();
 
         public string PackageOutputPath { get; init; }
 
@@ -128,6 +139,8 @@ namespace NuGetPush.Models
             }
 
             var dependencies = new HashSet<ClassLibrary>();
+            var diagnostics = new List<string>();
+
             foreach (var packageReference in Project.GetItems("PackageReference"))
             {
                 var packageName = packageReference.EvaluatedInclude;
@@ -137,21 +150,30 @@ namespace NuGetPush.Models
                     try
                     {
                         var versionRange = PackageVersionHelper.GetVersionFromPackageReference(packageReference, centralPackageVersions);
-                        if (!versionRange.Satisfies(packageProject.PackageVersion))
+                        if (versionRange.Satisfies(packageProject.PackageVersion))
                         {
-                            return;
+                            dependencies.Add(packageProject);
                         }
-
-                        dependencies.Add(packageProject);
+                        else
+                        {
+                            diagnostics.Add($"Dependency on package \"{packageName}\" version \"{versionRange.OriginalString}\" is not satisfied by project \"{packageProject.Name}\" version \"{packageProject.PackageVersion}\".");
+                        }
                     }
-                    catch (InvalidDataException)
+                    catch (InvalidDataException e)
                     {
-                        return;
+                        diagnostics.Add(e.Message);
                     }
                 }
             }
 
-            Dependencies = dependencies;
+            if (diagnostics.Count == 0)
+            {
+                Dependencies = dependencies;
+            }
+            else
+            {
+                Diagnostics.AddRange(diagnostics);
+            }
         }
 
         public void FindDependees(Solution solution)

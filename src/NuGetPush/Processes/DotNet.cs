@@ -70,12 +70,15 @@ namespace NuGetPush.Processes
             var processStartInfo = new ProcessStartInfo
             {
                 CreateNoWindow = true,
+                RedirectStandardOutput = true,
                 FileName = ProcessName,
                 Arguments = $"pack \"{project.ProjectPath}\" -nologo -c Release -verbosity:quiet /p:IsPublishBuild=true /p:GeneratePackageOnBuild=false",
             };
 
             using var dotnetPackProcess = Process.Start(processStartInfo);
             await dotnetPackProcess.WaitForExitAsync();
+
+            project.Diagnostics.Add(await dotnetPackProcess.StandardOutput.ReadToEndAsync());
 
             return dotnetPackProcess.ExitCode == 0;
         }

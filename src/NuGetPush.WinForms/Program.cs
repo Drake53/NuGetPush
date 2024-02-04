@@ -152,6 +152,8 @@ namespace NuGetPush.WinForms
             {
                 if (project.CanPack(uncommittedChanges, force))
                 {
+                    project.Diagnostics.Clear();
+
                     result.Add(project);
                 }
             }
@@ -246,7 +248,17 @@ namespace NuGetPush.WinForms
         /// </param>
         private static async Task<HashSet<ClassLibrary>> PushProjectsAsync(IEnumerable<ClassLibrary> projectsToPush, bool force)
         {
-            var result = projectsToPush.Where(project => project.CanPush(force)).ToHashSet();
+            var result = new HashSet<ClassLibrary>();
+
+            foreach (var project in projectsToPush)
+            {
+                if (project.CanPush(force))
+                {
+                    project.Diagnostics.Clear();
+
+                    result.Add(project);
+                }
+            }
 
             foreach (ListViewItem item in _form.ProjectListView.Items)
             {
@@ -303,7 +315,7 @@ namespace NuGetPush.WinForms
         private static void UpdateDiagnosticsDisplay()
         {
             _form.DiagnosticsDisplay.Text = _form.ProjectListView.TryGetSelectedItemTag(out var tag)
-                ? tag.ClassLibrary.PackageDescription
+                ? string.Join(Environment.NewLine + Environment.NewLine, tag.ClassLibrary.Diagnostics.Append($"Description:{Environment.NewLine}{tag.ClassLibrary.PackageDescription}"))
                 : $"{_form.ProjectListView.SelectedItems.Count} projects selected.";
         }
 
