@@ -187,6 +187,8 @@ namespace NuGetPush.WinForms
                     }
                 }
 
+                _form.ProjectListView.Sort();
+
                 var packProjectsResult = await Utils.PackProjectsAsync(packableProjects);
                 var projectBuildsSucceeded = packProjectsResult.Succeeded;
                 var projectBuildsFailed = packProjectsResult.Failed;
@@ -232,6 +234,8 @@ namespace NuGetPush.WinForms
                         item.Update(ProjectStatus.DependencyError);
                     }
                 }
+
+                _form.ProjectListView.Sort();
             }
 
             return result;
@@ -252,6 +256,8 @@ namespace NuGetPush.WinForms
                     item.Update(ProjectStatus.Working);
                 }
             }
+
+            _form.ProjectListView.Sort();
 
             var testFailed = new HashSet<ClassLibrary>();
             var uploadFailed = new HashSet<ClassLibrary>();
@@ -281,6 +287,8 @@ namespace NuGetPush.WinForms
                     item.Update(testFailed.Contains(tag.ClassLibrary) ? ProjectStatus.TestFailed : uploadFailed.Contains(tag.ClassLibrary) ? ProjectStatus.PushError : ProjectStatus.Pushed);
                 }
             }
+
+            _form.ProjectListView.Sort();
 
             return result;
         }
@@ -319,6 +327,8 @@ namespace NuGetPush.WinForms
                     item.Update(true);
                 }
             }
+
+            _form.ProjectListView.Sort();
 
             await _form.ProjectListView.UpdateContextMenuAsync();
         }
