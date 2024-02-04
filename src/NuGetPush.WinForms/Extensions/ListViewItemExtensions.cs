@@ -68,6 +68,8 @@ namespace NuGetPush.WinForms.Extensions
         {
             return column switch
             {
+                -1 => item.GetTag().Index.CompareTo(other.GetTag().Index),
+
                 StatusColumnIndex => 0 - item.GetTag().Status.CompareTo(other.GetTag().Status),
 
                 _ => string.IsNullOrWhiteSpace(item.SubItems[column].Text) == string.IsNullOrWhiteSpace(other.SubItems[column].Text)

@@ -439,11 +439,12 @@ namespace NuGetPush.WinForms
                 var anyCanBePushed = false;
                 var anyCanBePackedAndPushed = false;
 
+                var index = 0;
                 foreach (var project in _solution.Projects.OrderBy(project => project.Name))
                 {
                     await project.FindLatestVersionAsync();
 
-                    var tag = new ItemTag(project);
+                    var tag = new ItemTag(project, index++);
                     _form.ProjectListView.Items.Add(ListViewItemExtensions.Create(tag));
 
                     var canPush = tag.ClassLibrary.CanPush(false);

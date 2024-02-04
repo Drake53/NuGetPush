@@ -14,15 +14,18 @@ namespace NuGetPush.WinForms
 {
     public sealed class ItemTag
     {
-        public ItemTag(ClassLibrary classLibrary, string? submoduleName = null)
+        public ItemTag(ClassLibrary classLibrary, int index, string? submoduleName = null)
         {
             ClassLibrary = classLibrary;
+            Index = index;
             SubmoduleName = submoduleName ?? string.Empty;
         }
 
-        public ClassLibrary ClassLibrary { get; private set; }
+        public ClassLibrary ClassLibrary { get; }
 
-        public string SubmoduleName { get; private set; }
+        public int Index { get; }
+
+        public string SubmoduleName { get; }
 
         public ListViewItem ListViewItem { get; set; }
 
