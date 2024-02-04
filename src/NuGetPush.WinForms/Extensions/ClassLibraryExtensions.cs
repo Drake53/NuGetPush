@@ -67,22 +67,34 @@ namespace NuGetPush.WinForms.Extensions
                 return ProjectStatus.Misconfigured;
             }
 
-            if (project.PackageVersion == project.KnownLatestLocalVersion && project.PackageVersion == project.KnownLatestNuGetVersion)
+            if (project.RemotePackageSource is null)
             {
-                return ProjectStatus.UpToDate;
-            }
+                if (project.PackageVersion == project.KnownLatestLocalVersion)
+                {
+                    return ProjectStatus.UpToDate;
+                }
 
-            if (project.PackageVersion > project.KnownLatestLocalVersion && project.PackageVersion > project.KnownLatestNuGetVersion)
-            {
                 return ProjectStatus.Pending;
             }
-
-            if (project.PackageVersion > project.KnownLatestNuGetVersion)
+            else
             {
-                return ProjectStatus.ReadyToPush;
-            }
+                if (project.PackageVersion == project.KnownLatestLocalVersion && project.PackageVersion == project.KnownLatestNuGetVersion)
+                {
+                    return ProjectStatus.UpToDate;
+                }
 
-            return ProjectStatus.ReadyToPack;
+                if (project.PackageVersion > project.KnownLatestLocalVersion && project.PackageVersion > project.KnownLatestNuGetVersion)
+                {
+                    return ProjectStatus.Pending;
+                }
+
+                if (project.PackageVersion > project.KnownLatestNuGetVersion)
+                {
+                    return ProjectStatus.ReadyToPush;
+                }
+
+                return ProjectStatus.ReadyToPack;
+            }
         }
     }
 }
