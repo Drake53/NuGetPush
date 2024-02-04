@@ -36,7 +36,7 @@ namespace NuGetPush.Models
 
         public PackageSource PackageSource => _packageSource;
 
-        public async Task<NuGetVersion?> GetLatestNuGetVersionAsync(CancellationToken cancellationToken = default)
+        public async Task<NuGetVersion?> GetLatestNuGetVersionAsync(CancellationToken cancellationToken)
         {
             var requiresAuthentication = PackageSourceStoreProvider.PackageSourceStore.GetPackageSourceRequiresAuthentication(_packageSource, out var credentials);
             if (requiresAuthentication && credentials is null)
@@ -67,7 +67,7 @@ namespace NuGetPush.Models
             }
         }
 
-        public Task<bool> UploadPackageAsync(Action<string>? deviceLoginCallback, CancellationToken cancellationToken = default)
+        public Task<bool> UploadPackageAsync(Action<string>? deviceLoginCallback, CancellationToken cancellationToken)
         {
             var packageOutputPath = _project.PackageOutputPath;
             if (!Directory.Exists(packageOutputPath))

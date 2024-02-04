@@ -27,7 +27,7 @@ namespace NuGetPush.Processes
         }
 
         // https://blog.rsuter.com/missing-sdk-when-using-the-microsoft-build-package-in-net-core/
-        public static async Task SetMsBuildExePathAsync()
+        public static async Task SetMsBuildExePathAsync(CancellationToken cancellationToken)
         {
             var processStartInfo = new ProcessStartInfo
             {
@@ -38,7 +38,7 @@ namespace NuGetPush.Processes
             };
 
             using var dotnetListSdksProcess = Process.Start(processStartInfo);
-            await dotnetListSdksProcess.WaitForExitAsync();
+            await dotnetListSdksProcess.WaitForExitAsync(cancellationToken);
 
             var sdks = new List<DotNetSdk>();
             var prefix = $"{Environment.Version.ToString(2)}.";
@@ -65,7 +65,7 @@ namespace NuGetPush.Processes
             Environment.SetEnvironmentVariable("MSBUILD_EXE_PATH", sdks.OrderByDescending(sdk => sdk.SdkVersion).First().MSBuildPath);
         }
 
-        public static async Task<bool> PackAsync(ClassLibrary project)
+        public static async Task<bool> PackAsync(ClassLibrary project, CancellationToken cancellationToken)
         {
             var processStartInfo = new ProcessStartInfo
             {
@@ -76,14 +76,14 @@ namespace NuGetPush.Processes
             };
 
             using var dotnetPackProcess = Process.Start(processStartInfo);
-            await dotnetPackProcess.WaitForExitAsync();
+            await dotnetPackProcess.WaitForExitAsync(cancellationToken);
 
             project.Diagnostics.Add(await dotnetPackProcess.StandardOutput.ReadToEndAsync());
 
             return dotnetPackProcess.ExitCode == 0;
         }
 
-        public static async Task<bool> TestAsync(TestProject project)
+        public static async Task<bool> TestAsync(TestProject project, CancellationToken cancellationToken)
         {
             var processStartInfo = new ProcessStartInfo
             {
@@ -93,13 +93,13 @@ namespace NuGetPush.Processes
             };
 
             using var dotnetTestProcess = Process.Start(processStartInfo);
-            await dotnetTestProcess.WaitForExitAsync();
+            await dotnetTestProcess.WaitForExitAsync(cancellationToken);
 
             return dotnetTestProcess.ExitCode == 0;
         }
 
         // https://docs.microsoft.com/en-us/nuget/nuget-org/publish-a-package
-        public static async Task<bool> PushAsync(string fileName, string nuGetApiKey, string nuGetSource, Action<string> deviceLoginCallback, CancellationToken cancellationToken = default)
+        public static async Task<bool> PushAsync(string fileName, string nuGetApiKey, string nuGetSource, Action<string> deviceLoginCallback, CancellationToken cancellationToken)
         {
             var processStartInfo = new ProcessStartInfo
             {

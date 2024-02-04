@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 using Microsoft.Build.Construction;
@@ -58,7 +59,7 @@ namespace NuGetPush.Models
 
         public override string ToString() => Name;
 
-        public async Task ParseSolutionProjectsAsync(List<string>? solutionFilterProjects, string? nuGetLocalPackageSource, bool checkDependencies)
+        public async Task ParseSolutionProjectsAsync(List<string>? solutionFilterProjects, string? nuGetLocalPackageSource, bool checkDependencies, CancellationToken cancellationToken)
         {
             if (Projects is not null || TestProjects is not null)
             {
@@ -76,7 +77,7 @@ namespace NuGetPush.Models
 
             var solutionFile = SolutionFile.Parse(_solutionFileName);
 
-            await DotNet.SetMsBuildExePathAsync();
+            await DotNet.SetMsBuildExePathAsync(cancellationToken);
 
             using var projectCollection = new ProjectCollection();
             var projectOptions = new ProjectOptions
@@ -141,7 +142,7 @@ namespace NuGetPush.Models
             {
                 foreach (var project in Projects)
                 {
-                    await project.FindLatestVersionAsync();
+                    await project.FindLatestVersionAsync(cancellationToken);
                 }
             }
 

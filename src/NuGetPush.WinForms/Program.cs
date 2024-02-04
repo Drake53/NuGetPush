@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
@@ -31,6 +32,7 @@ namespace NuGetPush.WinForms
         private static Solution? _solution;
 
         private static MainForm _form;
+        private static CancellationTokenSource? _cancellationTokenSource;
 
         [STAThread]
         private static void Main(string[] args)
@@ -44,6 +46,7 @@ namespace NuGetPush.WinForms
             _form.PackAllButton.Click += async (s, e) => await OnClickPackAllAsync();
             _form.PushAllButton.Click += async (s, e) => await OnClickPushAllAsync();
             _form.PackAndPushAllButton.Click += async (s, e) => await OnClickPackAndPushAllAsync();
+            _form.CancelWorkButton.Click += OnClickCancel;
 
             _form.ProjectListView.SelectedIndexChanged += (s, e) => UpdateDiagnosticsDisplay();
 
@@ -68,63 +71,110 @@ namespace NuGetPush.WinForms
 
         internal static async Task OnClickPackSelectedAsync()
         {
-            StartWork();
-
-            var selectedProjects = GetSelectedProjects();
-            var handledProjects = await PackProjectsAsync(selectedProjects, true);
-
-            await FinishWorkAsync("Projects have been packed.", handledProjects);
+            var cancellationToken = StartWork();
+            try
+            {
+                var selectedProjects = GetSelectedProjects();
+                var handledProjects = await PackProjectsAsync(selectedProjects, true, cancellationToken);
+            }
+            catch (TaskCanceledException)
+            {
+            }
+            finally
+            {
+                await FinishWorkAsync("Projects have been packed.", cancellationToken);
+            }
         }
 
         private static async Task OnClickPackAllAsync()
         {
-            StartWork();
-
-            var handledProjects = await PackProjectsAsync(_solution.Projects, false);
-
-            await FinishWorkAsync("Projects have been packed.", handledProjects);
+            var cancellationToken = StartWork();
+            try
+            {
+                var handledProjects = await PackProjectsAsync(_solution.Projects, false, cancellationToken);
+            }
+            catch (TaskCanceledException)
+            {
+            }
+            finally
+            {
+                await FinishWorkAsync("Projects have been packed.", cancellationToken);
+            }
         }
 
         internal static async Task OnClickPushSelectedAsync()
         {
-            StartWork();
-
-            var selectedProjects = GetSelectedProjects();
-            var handledProjects = await PushProjectsAsync(selectedProjects, selectedProjects.Count == 1);
-
-            await FinishWorkAsync("Projects have been pushed.", handledProjects);
+            var cancellationToken = StartWork();
+            try
+            {
+                var selectedProjects = GetSelectedProjects();
+                var handledProjects = await PushProjectsAsync(selectedProjects, selectedProjects.Count == 1, cancellationToken);
+            }
+            catch (TaskCanceledException)
+            {
+            }
+            finally
+            {
+                await FinishWorkAsync("Projects have been pushed.", cancellationToken);
+            }
         }
 
         private static async Task OnClickPushAllAsync()
         {
-            StartWork();
-
-            var handledProjects = await PushProjectsAsync(_solution.Projects, false);
-
-            await FinishWorkAsync("Projects have been pushed.", handledProjects);
+            var cancellationToken = StartWork();
+            try
+            {
+                var handledProjects = await PushProjectsAsync(_solution.Projects, false, cancellationToken);
+            }
+            catch (TaskCanceledException)
+            {
+            }
+            finally
+            {
+                await FinishWorkAsync("Projects have been pushed.", cancellationToken);
+            }
         }
 
         internal static async Task OnClickPackAndPushSelectedAsync()
         {
-            StartWork();
+            var cancellationToken = StartWork();
+            try
+            {
+                var selectedProjects = GetSelectedProjects();
+                var handledProjects = await PackProjectsAsync(selectedProjects, true, cancellationToken);
 
-            var selectedProjects = GetSelectedProjects();
-            var handledProjects = await PackProjectsAsync(selectedProjects, true);
-
-            await PushProjectsAsync(handledProjects, selectedProjects.Count == 1);
-
-            await FinishWorkAsync("Projects have been packed and pushed.", handledProjects);
+                await PushProjectsAsync(handledProjects, selectedProjects.Count == 1, cancellationToken);
+            }
+            catch (TaskCanceledException)
+            {
+            }
+            finally
+            {
+                await FinishWorkAsync("Projects have been packed and pushed.", cancellationToken);
+            }
         }
 
         private static async Task OnClickPackAndPushAllAsync()
         {
-            StartWork();
+            var cancellationToken = StartWork();
+            try
+            {
+                var handledProjects = await PackProjectsAsync(_solution.Projects, false, cancellationToken);
 
-            var handledProjects = await PackProjectsAsync(_solution.Projects, false);
+                await PushProjectsAsync(handledProjects, false, cancellationToken);
+            }
+            catch (TaskCanceledException)
+            {
+            }
+            finally
+            {
+                await FinishWorkAsync("Projects have been packed and pushed.", cancellationToken);
+            }
+        }
 
-            await PushProjectsAsync(handledProjects, false);
-
-            await FinishWorkAsync("Projects have been packed and pushed.", handledProjects);
+        private static void OnClickCancel(object? sender, EventArgs e)
+        {
+            _cancellationTokenSource?.Cancel();
         }
 
         private static List<ClassLibrary> GetSelectedProjects()
@@ -142,11 +192,11 @@ namespace NuGetPush.WinForms
             return result;
         }
 
-        private static async Task<HashSet<ClassLibrary>> PackProjectsAsync(IEnumerable<ClassLibrary> projectsToPack, bool force)
+        private static async Task<HashSet<ClassLibrary>> PackProjectsAsync(IEnumerable<ClassLibrary> projectsToPack, bool force, CancellationToken cancellationToken)
         {
             var result = new HashSet<ClassLibrary>();
 
-            var uncommittedChanges = await Git.CheckUncommittedChangesAsync(_solution.RepositoryRoot);
+            var uncommittedChanges = await Git.CheckUncommittedChangesAsync(_solution.RepositoryRoot, cancellationToken);
 
             foreach (var project in projectsToPack)
             {
@@ -191,13 +241,13 @@ namespace NuGetPush.WinForms
 
                 _form.ProjectListView.Sort();
 
-                var packProjectsResult = await Utils.PackProjectsAsync(packableProjects);
+                var packProjectsResult = await Utils.PackProjectsAsync(packableProjects, cancellationToken);
                 var projectBuildsSucceeded = packProjectsResult.Succeeded;
                 var projectBuildsFailed = packProjectsResult.Failed;
 
                 foreach (var project in projectBuildsSucceeded)
                 {
-                    var uploadSucceeded = await project.LocalPackageSource.UploadPackageAsync(project, null);
+                    var uploadSucceeded = await project.LocalPackageSource.UploadPackageAsync(project, null, cancellationToken);
                     if (uploadSucceeded)
                     {
                         if (project.KnownLatestLocalVersion is null || project.PackageVersion > project.KnownLatestLocalVersion)
@@ -246,7 +296,7 @@ namespace NuGetPush.WinForms
         /// <param name="force">
         /// If <see langword="true"/>, projects that don't exist yet on the remote package feed can be pushed as well.
         /// </param>
-        private static async Task<HashSet<ClassLibrary>> PushProjectsAsync(IEnumerable<ClassLibrary> projectsToPush, bool force)
+        private static async Task<HashSet<ClassLibrary>> PushProjectsAsync(IEnumerable<ClassLibrary> projectsToPush, bool force, CancellationToken cancellationToken)
         {
             var result = new HashSet<ClassLibrary>();
 
@@ -276,7 +326,7 @@ namespace NuGetPush.WinForms
 
             foreach (var project in result)
             {
-                var uploadSucceeded = project.RemotePackageSource is not null && await project.RemotePackageSource.UploadPackageAsync(project, HandleDeviceLogin);
+                var uploadSucceeded = project.RemotePackageSource is not null && await project.RemotePackageSource.UploadPackageAsync(project, HandleDeviceLogin, cancellationToken);
                 if (uploadSucceeded)
                 {
                     if (project.KnownLatestNuGetVersion is null || project.PackageVersion > project.KnownLatestNuGetVersion)
@@ -309,7 +359,11 @@ namespace NuGetPush.WinForms
         {
             using var deviceLoginForm = new DeviceLoginForm(deviceLoginLine);
 
-            deviceLoginForm.ShowDialog();
+            var dialogResult = deviceLoginForm.ShowDialog();
+            if (dialogResult != DialogResult.OK)
+            {
+                _cancellationTokenSource?.Cancel();
+            }
         }
 
         private static void UpdateDiagnosticsDisplay()
@@ -319,33 +373,49 @@ namespace NuGetPush.WinForms
                 : $"{_form.ProjectListView.SelectedItems.Count} projects selected.";
         }
 
-        private static void StartWork()
+        private static CancellationToken StartWork()
         {
+            _cancellationTokenSource = new CancellationTokenSource();
+
             _form.ProjectListView.DisableContextMenuButtons();
+            _form.OpenCloseSolutionButton.Enabled = false;
             _form.PackAllButton.Enabled = false;
             _form.PushAllButton.Enabled = false;
             _form.PackAndPushAllButton.Enabled = false;
+            _form.CancelWorkButton.Enabled = true;
+
+            return _cancellationTokenSource.Token;
         }
 
-        private static async Task FinishWorkAsync(string message, HashSet<ClassLibrary> handledProjects)
+        private static async Task FinishWorkAsync(string message, CancellationToken cancellationToken)
         {
-            MessageBox.Show(message, string.Empty, MessageBoxButtons.OK, MessageBoxIcon.Information);
-
-            foreach (ListViewItem item in _form.ProjectListView.Items)
+            try
             {
-                var tag = item.GetTag();
-                if (handledProjects.Contains(tag.ClassLibrary))
+                if (_cancellationTokenSource?.IsCancellationRequested == true)
+                {
+                    MessageBox.Show("Canceled", string.Empty, MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+                else
+                {
+                    MessageBox.Show(message, string.Empty, MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+
+                foreach (ListViewItem item in _form.ProjectListView.Items)
                 {
                     item.Update(true);
                 }
+
+                _form.ProjectListView.Sort();
+
+                var uncommittedChanges = await Git.CheckUncommittedChangesAsync(_solution.RepositoryRoot, cancellationToken);
+
+                _form.ProjectListView.UpdateContextMenu(uncommittedChanges);
+                UpdateWorkButtonsEnabled(uncommittedChanges);
             }
-
-            _form.ProjectListView.Sort();
-
-            var uncommittedChanges = await Git.CheckUncommittedChangesAsync(_solution.RepositoryRoot);
-
-            _form.ProjectListView.UpdateContextMenu(uncommittedChanges);
-            UpdateWorkButtonsEnabled(uncommittedChanges);
+            finally
+            {
+                _cancellationTokenSource?.Dispose();
+            }
         }
 
         private static async Task OpenSolutionAsync()
@@ -357,121 +427,139 @@ namespace NuGetPush.WinForms
                 _form.SolutionInputBrowseButton.Enabled = false;
                 _form.OpenCloseSolutionButton.Text = "Close solution";
 
-                FileInfo solutionFileInfo = fileInfo;
-                List<string>? solutionFilterProjects = null;
-                if (string.Equals(fileInfo.Extension, ".slnf", StringComparison.OrdinalIgnoreCase))
+                var cancellationToken = StartWork();
+                try
                 {
-                    using var solutionFilterFileStream = fileInfo.OpenRead();
-
-                    var options = new JsonSerializerOptions(JsonSerializerDefaults.General)
+                    FileInfo solutionFileInfo = fileInfo;
+                    List<string>? solutionFilterProjects = null;
+                    if (string.Equals(fileInfo.Extension, ".slnf", StringComparison.OrdinalIgnoreCase))
                     {
-                        PropertyNameCaseInsensitive = true,
-                    };
+                        using var solutionFilterFileStream = fileInfo.OpenRead();
 
-                    var solutionFilter = JsonSerializer.Deserialize<SolutionFilterFile>(solutionFilterFileStream, options);
+                        var options = new JsonSerializerOptions(JsonSerializerDefaults.General)
+                        {
+                            PropertyNameCaseInsensitive = true,
+                        };
 
-                    solutionFileInfo = new FileInfo(Path.Combine(fileInfo.DirectoryName, solutionFilter.Solution.Path));
-                    solutionFilterProjects = solutionFilter.Solution.Projects.Select(path => Path.GetFullPath(path, fileInfo.DirectoryName)).ToList();
+                        var solutionFilter = JsonSerializer.Deserialize<SolutionFilterFile>(solutionFilterFileStream, options);
+
+                        solutionFileInfo = new FileInfo(Path.Combine(fileInfo.DirectoryName, solutionFilter.Solution.Path));
+                        solutionFilterProjects = solutionFilter.Solution.Projects.Select(path => Path.GetFullPath(path, fileInfo.DirectoryName)).ToList();
+                    }
+
+                    var repositoryRoot = await Git.GetRepositoryRootAsync(solutionFileInfo.DirectoryName, cancellationToken);
+
+                    var uncommittedChanges = await Git.CheckUncommittedChangesAsync(repositoryRoot, cancellationToken);
+
+                    _solution = new Solution(repositoryRoot, solutionFileInfo.FullName);
+
+                    using var packageSourcesForm = new PackageSourcesForm(_solution.PackageSources);
+
+                    const string JsonFileName = "packagesources.json";
+                    var jsonFileInfo = new FileInfo(JsonFileName);
+
+                    List<SolutionPackageSources>? packageSources = null;
+                    if (jsonFileInfo.Exists)
+                    {
+                        using var jsonFileStream = jsonFileInfo.OpenRead();
+                        try
+                        {
+                            packageSources = JsonSerializer.Deserialize<List<SolutionPackageSources>>(jsonFileStream);
+                        }
+                        catch
+                        {
+                        }
+                    }
+
+                    packageSources ??= new List<SolutionPackageSources>();
+
+                    var solutionFilePath = Path.GetFullPath(solutionFileInfo.FullName).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+                    var solutionPackageSources = packageSources.FirstOrDefault(s => string.Equals(Path.GetFullPath(s.SolutionPath).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar), solutionFilePath, StringComparison.OrdinalIgnoreCase));
+
+                    if (solutionPackageSources is not null)
+                    {
+                        if (!string.IsNullOrEmpty(solutionPackageSources.LocalPackageSource))
+                        {
+                            packageSourcesForm.LocalPackageSource = _solution.PackageSources.FirstOrDefault(p => p.IsLocal && string.Equals(p.Source, solutionPackageSources.LocalPackageSource, StringComparison.OrdinalIgnoreCase));
+                        }
+
+                        if (!string.IsNullOrEmpty(solutionPackageSources.RemotePackageSource))
+                        {
+                            packageSourcesForm.RemotePackageSource = _solution.PackageSources.FirstOrDefault(p => !p.IsLocal && string.Equals(p.Source, solutionPackageSources.RemotePackageSource, StringComparison.OrdinalIgnoreCase));
+                        }
+                        else if (!string.IsNullOrEmpty(solutionPackageSources.LocalPackageSource))
+                        {
+                            packageSourcesForm.RemotePackageSource = NoPackageSource.Instance;
+                        }
+                    }
+                    else
+                    {
+                        solutionPackageSources = new SolutionPackageSources
+                        {
+                            SolutionPath = solutionFilePath,
+                        };
+
+                        packageSources.Add(solutionPackageSources);
+                    }
+
+                    var dialogResult = packageSourcesForm.ShowDialog();
+                    if (dialogResult != DialogResult.OK)
+                    {
+                        CloseSolution();
+
+                        return;
+                    }
+
+                    if (packageSourcesForm.LocalPackageSource is null ||
+                        packageSourcesForm.RemotePackageSource is null)
+                    {
+                        MessageBox.Show("You must select a local and a remote package source to use this program.", "No package sources selected", MessageBoxButtons.OK, MessageBoxIcon.Error);
+
+                        CloseSolution();
+
+                        return;
+                    }
+
+                    _solution.SelectedLocalPackageSource = packageSourcesForm.LocalPackageSource;
+                    _solution.SelectedRemotePackageSource = packageSourcesForm.RemotePackageSource as PackageSource;
+
+                    solutionPackageSources.LocalPackageSource = _solution.SelectedLocalPackageSource.Source;
+                    solutionPackageSources.RemotePackageSource = _solution.SelectedRemotePackageSource?.Source;
+
+                    using (var jsonFileStream = jsonFileInfo.Create())
+                    {
+                        JsonSerializer.Serialize(jsonFileStream, packageSources);
+                    }
+
+                    await _solution.ParseSolutionProjectsAsync(solutionFilterProjects, null, true, cancellationToken);
+
+                    var index = 0;
+                    foreach (var project in _solution.Projects.OrderBy(project => project.Name))
+                    {
+                        await project.FindLatestVersionAsync(cancellationToken);
+
+                        var tag = new ItemTag(project, index++);
+                        _form.ProjectListView.Items.Add(ListViewItemExtensions.Create(tag));
+                    }
+
+                    _form.ProjectListView.LoadSolution(_solution);
+
+                    UpdateWorkButtonsEnabled(uncommittedChanges);
                 }
-
-                var repositoryRoot = await Git.GetRepositoryRootAsync(solutionFileInfo.DirectoryName);
-
-                var uncommittedChanges = await Git.CheckUncommittedChangesAsync(repositoryRoot);
-
-                _solution = new Solution(repositoryRoot, solutionFileInfo.FullName);
-
-                using var packageSourcesForm = new PackageSourcesForm(_solution.PackageSources);
-
-                const string JsonFileName = "packagesources.json";
-                var jsonFileInfo = new FileInfo(JsonFileName);
-
-                List<SolutionPackageSources>? packageSources = null;
-                if (jsonFileInfo.Exists)
-                {
-                    using var jsonFileStream = jsonFileInfo.OpenRead();
-                    try
-                    {
-                        packageSources = JsonSerializer.Deserialize<List<SolutionPackageSources>>(jsonFileStream);
-                    }
-                    catch
-                    {
-                    }
-                }
-
-                packageSources ??= new List<SolutionPackageSources>();
-
-                var solutionFilePath = Path.GetFullPath(solutionFileInfo.FullName).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-                var solutionPackageSources = packageSources.FirstOrDefault(s => string.Equals(Path.GetFullPath(s.SolutionPath).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar), solutionFilePath, StringComparison.OrdinalIgnoreCase));
-
-                if (solutionPackageSources is not null)
-                {
-                    if (!string.IsNullOrEmpty(solutionPackageSources.LocalPackageSource))
-                    {
-                        packageSourcesForm.LocalPackageSource = _solution.PackageSources.FirstOrDefault(p => p.IsLocal && string.Equals(p.Source, solutionPackageSources.LocalPackageSource, StringComparison.OrdinalIgnoreCase));
-                    }
-
-                    if (!string.IsNullOrEmpty(solutionPackageSources.RemotePackageSource))
-                    {
-                        packageSourcesForm.RemotePackageSource = _solution.PackageSources.FirstOrDefault(p => !p.IsLocal && string.Equals(p.Source, solutionPackageSources.RemotePackageSource, StringComparison.OrdinalIgnoreCase));
-                    }
-                    else if (!string.IsNullOrEmpty(solutionPackageSources.LocalPackageSource))
-                    {
-                        packageSourcesForm.RemotePackageSource = NoPackageSource.Instance;
-                    }
-                }
-                else
-                {
-                    solutionPackageSources = new SolutionPackageSources
-                    {
-                        SolutionPath = solutionFilePath,
-                    };
-
-                    packageSources.Add(solutionPackageSources);
-                }
-
-                var dialogResult = packageSourcesForm.ShowDialog();
-                if (dialogResult != DialogResult.OK)
+                catch (TaskCanceledException)
                 {
                     CloseSolution();
-
-                    return;
                 }
-
-                if (packageSourcesForm.LocalPackageSource is null ||
-                    packageSourcesForm.RemotePackageSource is null)
+                catch (Exception e)
                 {
-                    MessageBox.Show("You must select a local and a remote package source to use this program.", "No package sources selected", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    MessageBox.Show($"{e.GetType().FullName}: {e.Message}", "Failed to open solution", MessageBoxButtons.OK, MessageBoxIcon.Error);
 
                     CloseSolution();
-
-                    return;
                 }
-
-                _solution.SelectedLocalPackageSource = packageSourcesForm.LocalPackageSource;
-                _solution.SelectedRemotePackageSource = packageSourcesForm.RemotePackageSource as PackageSource;
-
-                solutionPackageSources.LocalPackageSource = _solution.SelectedLocalPackageSource.Source;
-                solutionPackageSources.RemotePackageSource = _solution.SelectedRemotePackageSource?.Source;
-
-                using (var jsonFileStream = jsonFileInfo.Create())
+                finally
                 {
-                    JsonSerializer.Serialize(jsonFileStream, packageSources);
+                    _cancellationTokenSource?.Dispose();
                 }
-
-                await _solution.ParseSolutionProjectsAsync(solutionFilterProjects, null, true);
-
-                var index = 0;
-                foreach (var project in _solution.Projects.OrderBy(project => project.Name))
-                {
-                    await project.FindLatestVersionAsync();
-
-                    var tag = new ItemTag(project, index++);
-                    _form.ProjectListView.Items.Add(ListViewItemExtensions.Create(tag));
-                }
-
-                _form.ProjectListView.LoadSolution(_solution);
-
-                UpdateWorkButtonsEnabled(uncommittedChanges);
             }
         }
 
@@ -501,9 +589,11 @@ namespace NuGetPush.WinForms
                 }
             }
 
+            _form.OpenCloseSolutionButton.Enabled = true;
             _form.PackAllButton.Enabled = anyCanBePacked;
             _form.PushAllButton.Enabled = anyCanBePushed;
             _form.PackAndPushAllButton.Enabled = anyCanBePackedAndPushed;
+            _form.CancelWorkButton.Enabled = false;
         }
 
         private static void CloseSolution()
@@ -517,6 +607,7 @@ namespace NuGetPush.WinForms
             _form.PackAllButton.Enabled = false;
             _form.PushAllButton.Enabled = false;
             _form.PackAndPushAllButton.Enabled = false;
+            _form.CancelWorkButton.Enabled = false;
 
             _form.ProjectListView.UnloadSolution();
 

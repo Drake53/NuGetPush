@@ -21,6 +21,7 @@ namespace NuGetPush.WinForms.Forms
     {
         private readonly RichTextBox _deviceLoginTextBox;
         private readonly Button _okButton;
+        private readonly Button _cancelButton;
 
         public DeviceLoginForm(string deviceLoginLine)
         {
@@ -53,7 +54,19 @@ namespace NuGetPush.WinForms.Forms
                 Close();
             };
 
-            this.AddControls(_deviceLoginTextBox, _okButton);
+            _cancelButton = new Button
+            {
+                Text = "Cancel",
+                Dock = DockStyle.Bottom,
+            };
+
+            _cancelButton.Click += (s, e) =>
+            {
+                DialogResult = DialogResult.Cancel;
+                Close();
+            };
+
+            this.AddControls(_deviceLoginTextBox, _okButton, _cancelButton);
         }
 
         // https://stackoverflow.com/a/43232486

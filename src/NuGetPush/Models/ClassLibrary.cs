@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 using Microsoft.Build.Evaluation;
@@ -90,7 +91,7 @@ namespace NuGetPush.Models
 
         public HashSet<TestProject> MisconfiguredTestProjects { get; init; } = new();
 
-        public async Task FindLatestVersionAsync()
+        public async Task FindLatestVersionAsync(CancellationToken cancellationToken)
         {
             if (PackageVersion is null)
             {
@@ -104,7 +105,7 @@ namespace NuGetPush.Models
                     continue;
                 }
 
-                var latestVersionFromSource = await packageSource.GetLatestNuGetVersionAsync(this);
+                var latestVersionFromSource = await packageSource.GetLatestNuGetVersionAsync(this, cancellationToken);
                 if (packageSource.IsLocal)
                 {
                     KnownLatestLocalVersion = latestVersionFromSource;

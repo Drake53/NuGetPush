@@ -29,7 +29,7 @@ namespace NuGetPush.Extensions
         public static async Task<NuGetVersion?> GetLatestNuGetVersionAsync(
             this PackageSource packageSource,
             ClassLibrary classLibrary,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken)
         {
             if (packageSource.IsLocal)
             {
@@ -79,7 +79,7 @@ namespace NuGetPush.Extensions
             this PackageSource packageSource,
             ClassLibrary classLibrary,
             Action<string>? deviceLoginCallback,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken)
         {
             if (packageSource.IsLocal)
             {

@@ -26,7 +26,7 @@ namespace NuGetPush.Models
 
         bool SetPackageSourceRequiresAuthentication(PackageSource packageSource, bool requiresAuthentication);
 
-        Task<FindPackageByIdResource> GetPackageByIdResourceAsync(PackageSource packageSource, CancellationToken cancellationToken = default);
+        Task<FindPackageByIdResource> GetPackageByIdResourceAsync(PackageSource packageSource, CancellationToken cancellationToken);
 
         string? GetOrAddApiKey(PackageSource packageSource);
 

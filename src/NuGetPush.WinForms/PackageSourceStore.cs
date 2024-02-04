@@ -150,7 +150,7 @@ namespace NuGetPush.WinForms
             return false;
         }
 
-        public async Task<FindPackageByIdResource> GetPackageByIdResourceAsync(PackageSource packageSource, CancellationToken cancellationToken = default)
+        public async Task<FindPackageByIdResource> GetPackageByIdResourceAsync(PackageSource packageSource, CancellationToken cancellationToken)
         {
             if (packageSource.IsLocal)
             {

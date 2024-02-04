@@ -19,8 +19,8 @@ namespace NuGetPush.Models
     {
         PackageSource PackageSource { get; }
 
-        Task<NuGetVersion?> GetLatestNuGetVersionAsync(CancellationToken cancellationToken = default);
+        Task<NuGetVersion?> GetLatestNuGetVersionAsync(CancellationToken cancellationToken);
 
-        Task<bool> UploadPackageAsync(Action<string>? deviceLoginCallback, CancellationToken cancellationToken = default);
+        Task<bool> UploadPackageAsync(Action<string>? deviceLoginCallback, CancellationToken cancellationToken);
     }
 }

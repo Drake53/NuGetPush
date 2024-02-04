@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Drawing;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
@@ -171,7 +172,7 @@ namespace NuGetPush.WinForms.Controls
 
         private async Task UpdateContextMenuAsync()
         {
-            var uncommittedChanges = await Git.CheckUncommittedChangesAsync(_solution.RepositoryRoot);
+            var uncommittedChanges = await Git.CheckUncommittedChangesAsync(_solution.RepositoryRoot, CancellationToken.None);
 
             UpdateContextMenu(uncommittedChanges);
         }

@@ -29,6 +29,7 @@ namespace NuGetPush.WinForms.Forms
         private readonly Button _packAllButton;
         private readonly Button _pushAllButton;
         private readonly Button _packAndPushAllButton;
+        private readonly Button _cancelWorkButton;
 
         private readonly ProjectListView _projectListView;
 
@@ -93,6 +94,14 @@ namespace NuGetPush.WinForms.Forms
             _packAndPushAllButton.Size = _packAndPushAllButton.PreferredSize;
             _packAndPushAllButton.Enabled = false;
 
+            _cancelWorkButton = new Button
+            {
+                Text = "Cancel",
+            };
+
+            _cancelWorkButton.Size = _cancelWorkButton.PreferredSize;
+            _cancelWorkButton.Enabled = false;
+
             _solutionInput.TextChanged += OnSolutionInputTextChanged;
 
             _solutionInputBrowseButton = new Button
@@ -143,7 +152,7 @@ namespace NuGetPush.WinForms.Forms
             };
 
             inputSolutionFlowLayout.AddControls(_solutionInput, _solutionInputBrowseButton, _openCloseSolutionButton);
-            buttonsFlowLayout.AddControls(_packAllButton, _pushAllButton, _packAndPushAllButton);
+            buttonsFlowLayout.AddControls(_packAllButton, _pushAllButton, _packAndPushAllButton, _cancelWorkButton);
             flowLayout.AddControls(inputSolutionFlowLayout, buttonsFlowLayout);
 
             splitContainer.Panel1.AddControls(_diagnosticsDisplay, flowLayout);
@@ -177,6 +186,8 @@ namespace NuGetPush.WinForms.Forms
         public Button PushAllButton => _pushAllButton;
 
         public Button PackAndPushAllButton => _packAndPushAllButton;
+
+        public Button CancelWorkButton => _cancelWorkButton;
 
         public ProjectListView ProjectListView => _projectListView;
 

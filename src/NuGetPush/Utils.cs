@@ -7,6 +7,7 @@
 
 using System.Collections.Generic;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 
 using NuGet.Versioning;
@@ -31,14 +32,14 @@ namespace NuGetPush
             return fileInfo.DirectoryName[prefixLength..];
         }
 
-        public static async Task<PackProjectsResult> PackProjectsAsync(IEnumerable<ClassLibrary> projects)
+        public static async Task<PackProjectsResult> PackProjectsAsync(IEnumerable<ClassLibrary> projects, CancellationToken cancellationToken)
         {
             var succeeded = new List<ClassLibrary>();
             var failed = new List<ClassLibrary>();
 
             foreach (var project in projects)
             {
-                if (await DotNet.PackAsync(project))
+                if (await DotNet.PackAsync(project, cancellationToken))
                 {
                     succeeded.Add(project);
                 }

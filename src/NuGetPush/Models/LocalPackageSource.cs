@@ -29,7 +29,7 @@ namespace NuGetPush.Models
 
         public PackageSource PackageSource => _packageSource;
 
-        public Task<NuGetVersion?> GetLatestNuGetVersionAsync(CancellationToken cancellationToken = default)
+        public Task<NuGetVersion?> GetLatestNuGetVersionAsync(CancellationToken cancellationToken)
         {
             var packageDirectory = Path.Combine(_packageSource.Source, _project.PackageName.ToLowerInvariant());
             if (Directory.Exists(packageDirectory))
@@ -42,7 +42,7 @@ namespace NuGetPush.Models
             return Task.FromResult<NuGetVersion?>(null);
         }
 
-        public Task<bool> UploadPackageAsync(Action<string>? deviceLoginCallback, CancellationToken cancellationToken = default)
+        public Task<bool> UploadPackageAsync(Action<string>? deviceLoginCallback, CancellationToken cancellationToken)
         {
             var packageOutputPath = _project.PackageOutputPath;
             if (!Directory.Exists(packageOutputPath))
