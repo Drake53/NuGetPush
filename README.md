@@ -37,9 +37,6 @@ The pack option will build the project and save the resulting .nupkg (and .snupk
 The push option will upload the latest version in your local package source to the remote package source.
 To prevent accidents, the push option will not work for projects with no (known) version in the remote package source if multiple projects are selected.
 
-This tool uses MSBuild to parse the .sln and .csproj files.
-If you run into any errors when trying to open a solution, you should first make sure the target framework of this tool matches the latest .NET SDK version you have installed.
-For example, if you have the .NET 7 SDK installed, you should change the target framework of NuGetPush and NuGetPush.WinForms to .NET 7 (currently these are .NET 6).
-Doing this will usually fix these errors.
+This tool uses MSBuild to parse the .sln and .csproj files, which requires you to have the .NET SDK installed.
 
 If the remote package source is an azure artifacts feed, you must install the following NuGet plugin: https://github.com/microsoft/artifacts-credprovider
