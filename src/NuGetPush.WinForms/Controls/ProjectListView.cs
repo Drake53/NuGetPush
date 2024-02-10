@@ -44,7 +44,7 @@ namespace NuGetPush.WinForms.Controls
                 new ColumnHeader { Text = "FileName", Width = 300 },
                 new ColumnHeader { Text = "Version", Width = 60 },
                 new ColumnHeader { Text = "(Local)", Width = 64 },
-                new ColumnHeader { Text = "(Remote)", Width = 64 },
+                new ColumnHeader { Text = "(Remote)", Width = 94 },
             });
 
             FullRowSelect = true;
