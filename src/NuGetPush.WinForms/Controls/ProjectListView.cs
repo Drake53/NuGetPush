@@ -172,7 +172,7 @@ namespace NuGetPush.WinForms.Controls
                     var canPush = project.CanPush(tags.Count == 1);
 
                     _packContextButton.Enabled |= canPack;
-                    _pushContextButton.Enabled |= canPush;
+                    _pushContextButton.Enabled |= canPush && project.KnownLatestLocalVersion is not null;
 
                     if (canPack && canPush)
                     {

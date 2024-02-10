@@ -583,7 +583,7 @@ namespace NuGetPush.WinForms
                     }
                 }
 
-                if (canPush)
+                if (canPush && project.KnownLatestLocalVersion is not null)
                 {
                     anyCanBePushed = true;
                 }
