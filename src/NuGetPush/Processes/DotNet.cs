@@ -78,7 +78,11 @@ namespace NuGetPush.Processes
             using var dotnetPackProcess = Process.Start(processStartInfo);
             await dotnetPackProcess.WaitForExitAsync(cancellationToken);
 
-            project.Diagnostics.Add(await dotnetPackProcess.StandardOutput.ReadToEndAsync());
+            var output = await dotnetPackProcess.StandardOutput.ReadToEndAsync();
+            if (!string.IsNullOrEmpty(output))
+            {
+                project.Diagnostics.Add(output);
+            }
 
             return dotnetPackProcess.ExitCode == 0;
         }
