@@ -533,6 +533,8 @@ namespace NuGetPush.WinForms
 
                     await _solution.ParseSolutionProjectsAsync(solutionFilterProjects, null, true, cancellationToken);
 
+                    _form.ProjectListView.LoadSolution(_solution);
+
                     var index = 0;
                     foreach (var project in _solution.Projects.OrderBy(project => project.Name))
                     {
@@ -541,8 +543,6 @@ namespace NuGetPush.WinForms
                         var tag = new ItemTag(project, index++);
                         _form.ProjectListView.Items.Add(ListViewItemExtensions.Create(tag));
                     }
-
-                    _form.ProjectListView.LoadSolution(_solution);
 
                     UpdateWorkButtonsEnabled(uncommittedChanges);
                 }
