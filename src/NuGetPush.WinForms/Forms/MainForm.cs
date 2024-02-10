@@ -200,13 +200,18 @@ namespace NuGetPush.WinForms.Forms
 
         private void SetOpenSolutionButtonEnabled(bool enabled)
         {
+            void SetButtonEnabled()
+            {
+                _openCloseSolutionButton.Enabled = enabled;
+            }
+
             if (_openCloseSolutionButton.InvokeRequired)
             {
-                _openCloseSolutionButton.Invoke(new Action(() => _openCloseSolutionButton.Enabled = enabled));
+                _openCloseSolutionButton.Invoke(SetButtonEnabled);
             }
             else
             {
-                _openCloseSolutionButton.Enabled = enabled;
+                SetButtonEnabled();
             }
         }
 

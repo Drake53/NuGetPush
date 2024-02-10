@@ -56,13 +56,25 @@ namespace NuGetPush.WinForms.Extensions
 
         public static void Update(this ListViewItem item, ProjectStatus status)
         {
-            var tag = item.GetTag();
-            tag.Status = status;
+            void UpdateItem()
+            {
+                var tag = item.GetTag();
+                tag.Status = status;
 
-            item.ImageIndex = (int)tag.Status;
-            item.SubItems[StatusColumnIndex].Text = tag.Status.ToString();
-            item.SubItems[LocalVersionColumnIndex].Text = tag.ClassLibrary.KnownLatestLocalVersion?.ToNormalizedString() ?? string.Empty;
-            item.SubItems[NuGetVersionColumnIndex].Text = tag.ClassLibrary.GetRemotePackageString();
+                item.ImageIndex = (int)tag.Status;
+                item.SubItems[StatusColumnIndex].Text = tag.Status.ToString();
+                item.SubItems[LocalVersionColumnIndex].Text = tag.ClassLibrary.KnownLatestLocalVersion?.ToNormalizedString() ?? string.Empty;
+                item.SubItems[NuGetVersionColumnIndex].Text = tag.ClassLibrary.GetRemotePackageString();
+            }
+
+            if (item.ListView.InvokeRequired)
+            {
+                item.ListView.Invoke(UpdateItem);
+            }
+            else
+            {
+                UpdateItem();
+            }
         }
 
         public static int CompareTo(this ListViewItem item, ListViewItem other, int column)
