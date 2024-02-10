@@ -54,12 +54,14 @@ namespace NuGetPush.WinForms.Forms
             _solutionInput = new TextBox
             {
                 PlaceholderText = "Input solution...",
+                TabIndex = 0,
             };
 
             _openCloseSolutionButton = new Button
             {
                 Text = "Open solution",
                 Enabled = false,
+                TabIndex = 2,
             };
 
             _diagnosticsDisplay = new TextBox
@@ -68,11 +70,13 @@ namespace NuGetPush.WinForms.Forms
                 ReadOnly = true,
                 Dock = DockStyle.Fill,
                 ScrollBars = ScrollBars.Vertical,
+                TabIndex = 1,
             };
 
             _packAllButton = new Button
             {
                 Text = "Pack all",
+                TabIndex = 0,
             };
 
             _packAllButton.Size = _packAllButton.PreferredSize;
@@ -81,6 +85,7 @@ namespace NuGetPush.WinForms.Forms
             _pushAllButton = new Button
             {
                 Text = "Push all",
+                TabIndex = 1,
             };
 
             _pushAllButton.Size = _pushAllButton.PreferredSize;
@@ -89,6 +94,7 @@ namespace NuGetPush.WinForms.Forms
             _packAndPushAllButton = new Button
             {
                 Text = "Pack && push all",
+                TabIndex = 2,
             };
 
             _packAndPushAllButton.Size = _packAndPushAllButton.PreferredSize;
@@ -97,6 +103,7 @@ namespace NuGetPush.WinForms.Forms
             _cancelWorkButton = new Button
             {
                 Text = "Cancel",
+                TabIndex = 3,
             };
 
             _cancelWorkButton.Size = _cancelWorkButton.PreferredSize;
@@ -107,6 +114,7 @@ namespace NuGetPush.WinForms.Forms
             _solutionInputBrowseButton = new Button
             {
                 Text = "Browse",
+                TabIndex = 1,
             };
 
             _solutionInputBrowseButton.Size = _solutionInputBrowseButton.PreferredSize;
@@ -139,16 +147,19 @@ namespace NuGetPush.WinForms.Forms
                 Dock = DockStyle.Top,
                 FlowDirection = FlowDirection.TopDown,
                 Width = 640,
+                TabIndex = 0,
             };
 
             var inputSolutionFlowLayout = new FlowLayoutPanel
             {
                 FlowDirection = FlowDirection.LeftToRight,
+                TabIndex = 0,
             };
 
             var buttonsFlowLayout = new FlowLayoutPanel
             {
                 FlowDirection = FlowDirection.LeftToRight,
+                TabIndex = 1,
             };
 
             inputSolutionFlowLayout.AddControls(_solutionInput, _solutionInputBrowseButton, _openCloseSolutionButton);

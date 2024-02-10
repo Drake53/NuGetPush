@@ -100,12 +100,14 @@ namespace NuGetPush.WinForms.Forms
             {
                 Dock = DockStyle.Bottom,
                 Text = "OK",
+                TabIndex = 2,
             };
 
             var cancelButton = new Button
             {
                 Dock = DockStyle.Bottom,
                 Text = "Cancel",
+                TabIndex = 3,
             };
 
             okButton.Click += (s, e) =>
@@ -126,6 +128,7 @@ namespace NuGetPush.WinForms.Forms
             {
                 Dock = DockStyle.Top,
                 Text = "Local package source",
+                TabIndex = 0,
             };
 
             localPackageSourceGroupBox.AddControls(localPackageSourcePathLabel, _localPackageSourcesComboBox);
@@ -134,6 +137,7 @@ namespace NuGetPush.WinForms.Forms
             {
                 Dock = DockStyle.Top,
                 Text = "Remote package source",
+                TabIndex = 1,
             };
 
             remotePackageSourceGroupBox.AddControls(remotePackageSourceUriLabel, _remotePackageSourcesComboBox);

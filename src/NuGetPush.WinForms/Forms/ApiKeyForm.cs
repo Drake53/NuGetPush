@@ -39,18 +39,21 @@ namespace NuGetPush.WinForms.Forms
                 PlaceholderText = "API key...",
                 PasswordChar = '*',
                 Dock = DockStyle.Top,
+                TabIndex = 0,
             };
 
             _okButton = new Button
             {
                 Text = "OK",
                 Dock = DockStyle.Bottom,
+                TabIndex = 1,
             };
 
             _cancelButton = new Button
             {
                 Text = "Cancel",
                 Dock = DockStyle.Bottom,
+                TabIndex = 2,
             };
 
             _okButton.Click += (s, e) =>

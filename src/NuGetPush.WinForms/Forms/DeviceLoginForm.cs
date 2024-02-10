@@ -35,6 +35,7 @@ namespace NuGetPush.WinForms.Forms
                 Dock = DockStyle.Fill,
                 ReadOnly = true,
                 DetectUrls = true,
+                TabIndex = 0,
             };
 
             _deviceLoginTextBox.LinkClicked += (s, e) =>
@@ -46,6 +47,7 @@ namespace NuGetPush.WinForms.Forms
             {
                 Text = "OK",
                 Dock = DockStyle.Bottom,
+                TabIndex = 1,
             };
 
             _okButton.Click += (s, e) =>
@@ -58,6 +60,7 @@ namespace NuGetPush.WinForms.Forms
             {
                 Text = "Cancel",
                 Dock = DockStyle.Bottom,
+                TabIndex = 2,
             };
 
             _cancelButton.Click += (s, e) =>

@@ -39,6 +39,7 @@ namespace NuGetPush.WinForms.Forms
             {
                 PlaceholderText = "User name...",
                 Dock = DockStyle.Top,
+                TabIndex = 0,
             };
 
             _accessTokenTextBox = new TextBox
@@ -46,18 +47,21 @@ namespace NuGetPush.WinForms.Forms
                 PlaceholderText = "Access token...",
                 PasswordChar = '*',
                 Dock = DockStyle.Top,
+                TabIndex = 1,
             };
 
             _okButton = new Button
             {
                 Text = "OK",
                 Dock = DockStyle.Bottom,
+                TabIndex = 2,
             };
 
             _cancelButton = new Button
             {
                 Text = "Cancel",
                 Dock = DockStyle.Bottom,
+                TabIndex = 3,
             };
 
             _okButton.Click += (s, e) =>
