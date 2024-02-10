@@ -26,52 +26,78 @@ namespace NuGetPush.Extensions
 {
     public static class PackageSourceExtensions
     {
-        public static async Task<NuGetVersion?> GetLatestNuGetVersionAsync(
+        public static NuGetVersion? GetLatestLocalNuGetVersion(
+            this PackageSource packageSource,
+            ClassLibrary classLibrary)
+        {
+            if (!packageSource.IsLocal)
+            {
+                throw new ArgumentException("Package source must be local.", nameof(packageSource));
+            }
+
+            var packageDirectory = Path.Combine(packageSource.Source, classLibrary.PackageName.ToLowerInvariant());
+            if (Directory.Exists(packageDirectory))
+            {
+                return Directory.EnumerateFiles(packageDirectory, "*.nupkg", SearchOption.TopDirectoryOnly)
+                    .Select(filePath => GetNuGetVersionFromFile(classLibrary, filePath))
+                    .Max();
+            }
+
+            return null;
+        }
+
+        public static async Task<LatestPackageVersionResult> GetLatestRemoteNuGetVersionAsync(
             this PackageSource packageSource,
             ClassLibrary classLibrary,
+            bool enableCache,
             CancellationToken cancellationToken)
         {
             if (packageSource.IsLocal)
             {
-                var packageDirectory = Path.Combine(packageSource.Source, classLibrary.PackageName.ToLowerInvariant());
-                if (Directory.Exists(packageDirectory))
-                {
-                    return Directory.EnumerateFiles(packageDirectory, "*.nupkg", SearchOption.TopDirectoryOnly)
-                        .Select(filePath => GetNuGetVersionFromFile(classLibrary, filePath))
-                        .Max();
-                }
-
-                return null;
+                throw new ArgumentException("Package source must not be local.", nameof(packageSource));
             }
-            else
+
+            var requiresAuthentication = PackageSourceStoreProvider.PackageSourceStore.GetPackageSourceRequiresAuthentication(packageSource, out var credentials);
+            if (requiresAuthentication && credentials is null)
             {
-                var requiresAuthentication = PackageSourceStoreProvider.PackageSourceStore.GetPackageSourceRequiresAuthentication(packageSource, out var credentials);
-                if (requiresAuthentication && credentials is null)
+                return LatestPackageVersionResult.UnauthorizedResult;
+            }
+
+            packageSource.Credentials = credentials;
+
+            try
+            {
+                using var sourceCacheContext = new SourceCacheContext();
+
+                if (!enableCache)
                 {
-                    return null;
+                    sourceCacheContext.NoCache = true;
+                    sourceCacheContext.RefreshMemoryCache = true;
                 }
 
-                packageSource.Credentials = credentials;
+                var packageByIdResource = await PackageSourceStoreProvider.PackageSourceStore.GetPackageByIdResourceAsync(packageSource, cancellationToken);
+                var packageVersions = await packageByIdResource.GetAllVersionsAsync(classLibrary.PackageName, sourceCacheContext, NullLogger.Instance, cancellationToken);
+                var latestVersion = packageVersions.Max();
 
-                try
+                return new LatestPackageVersionResult(latestVersion);
+            }
+            catch (FatalProtocolException fatalProtocolException) when (IsUnauthorizedException(fatalProtocolException))
+            {
+                if (PackageSourceStoreProvider.PackageSourceStore.SetPackageSourceRequiresAuthentication(packageSource, true))
                 {
-                    var packageByIdResource = await PackageSourceStoreProvider.PackageSourceStore.GetPackageByIdResourceAsync(packageSource, cancellationToken);
-                    var packageVersions = await packageByIdResource.GetAllVersionsAsync(classLibrary.PackageName, new SourceCacheContext(), NullLogger.Instance, cancellationToken);
-                    return packageVersions.Max();
+                    return await packageSource.GetLatestRemoteNuGetVersionAsync(classLibrary, enableCache, cancellationToken);
                 }
-                catch (FatalProtocolException e)
-                {
-                    if (e.InnerException is HttpRequestException httpRequestException &&
-                        httpRequestException.StatusCode == HttpStatusCode.Unauthorized)
-                    {
-                        if (PackageSourceStoreProvider.PackageSourceStore.SetPackageSourceRequiresAuthentication(packageSource, true))
-                        {
-                            return await packageSource.GetLatestNuGetVersionAsync(classLibrary, cancellationToken);
-                        }
-                    }
 
-                    return null;
+                return LatestPackageVersionResult.UnauthorizedResult;
+            }
+            catch (Exception exception) when (exception is not TaskCanceledException)
+            {
+                if (cancellationToken.IsCancellationRequested)
+                {
+                    throw;
                 }
+
+                return LatestPackageVersionResult.ErrorResult;
             }
         }
 
@@ -171,6 +197,12 @@ namespace NuGetPush.Extensions
         private static NuGetVersion GetNuGetVersionFromFile(ClassLibrary classLibrary, string filePath)
         {
             return NuGetVersion.Parse(new FileInfo(filePath).Name[(classLibrary.PackageName.Length + 1)..^6]);
+        }
+
+        private static bool IsUnauthorizedException(FatalProtocolException fatalProtocolException)
+        {
+            return fatalProtocolException.InnerException is HttpRequestException httpRequestException
+                && httpRequestException.StatusCode == HttpStatusCode.Unauthorized;
         }
     }
 }

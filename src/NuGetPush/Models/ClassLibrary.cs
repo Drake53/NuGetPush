@@ -7,6 +7,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -17,6 +18,7 @@ using Microsoft.Build.Evaluation;
 using NuGet.Configuration;
 using NuGet.Versioning;
 
+using NuGetPush.Enums;
 using NuGetPush.Extensions;
 using NuGetPush.Helpers;
 
@@ -51,6 +53,10 @@ namespace NuGetPush.Models
 
             LocalPackageSource = localPackageSource;
             RemotePackageSource = remotePackageSource;
+
+            KnownLatestRemoteVersionState = remotePackageSource is null
+                ? RemotePackageVersionRequestState.Offline
+                : RemotePackageVersionRequestState.Loading;
         }
 
         public string Name { get; init; }
@@ -83,6 +89,8 @@ namespace NuGetPush.Models
 
         public NuGetVersion? KnownLatestNuGetVersion { get; set; }
 
+        public RemotePackageVersionRequestState KnownLatestRemoteVersionState { get; set; }
+
         public HashSet<ClassLibrary>? Dependencies { get; private set; }
 
         public HashSet<ClassLibrary> Dependees { get; private set; }
@@ -91,34 +99,36 @@ namespace NuGetPush.Models
 
         public HashSet<TestProject> MisconfiguredTestProjects { get; init; } = new();
 
-        public async Task FindLatestVersionAsync(CancellationToken cancellationToken)
+        public void FindLatestLocalVersion()
         {
             if (PackageVersion is null)
             {
                 return;
             }
 
-            foreach (var packageSource in new[] { LocalPackageSource, RemotePackageSource })
+            KnownLatestLocalVersion = LocalPackageSource.GetLatestLocalNuGetVersion(this);
+
+            if (KnownLatestLocalVersion is not null && (KnownLatestVersion is null || KnownLatestLocalVersion > KnownLatestVersion))
             {
-                if (packageSource is null)
-                {
-                    continue;
-                }
+                KnownLatestVersion = KnownLatestLocalVersion;
+            }
+        }
 
-                var latestVersionFromSource = await packageSource.GetLatestNuGetVersionAsync(this, cancellationToken);
-                if (packageSource.IsLocal)
-                {
-                    KnownLatestLocalVersion = latestVersionFromSource;
-                }
-                else
-                {
-                    KnownLatestNuGetVersion = latestVersionFromSource;
-                }
+        public async Task FindLatestRemoteVersionAsync(bool enableCache, CancellationToken cancellationToken)
+        {
+            if (PackageVersion is null || RemotePackageSource is null)
+            {
+                return;
+            }
 
-                if (KnownLatestVersion is null || latestVersionFromSource > KnownLatestVersion)
-                {
-                    KnownLatestVersion = latestVersionFromSource;
-                }
+            var latestVersionResult = await RemotePackageSource.GetLatestRemoteNuGetVersionAsync(this, enableCache, cancellationToken);
+
+            KnownLatestNuGetVersion = latestVersionResult.Version;
+            KnownLatestRemoteVersionState = latestVersionResult.State;
+
+            if (KnownLatestNuGetVersion is not null && (KnownLatestVersion is null || KnownLatestNuGetVersion > KnownLatestVersion))
+            {
+                KnownLatestVersion = KnownLatestNuGetVersion;
             }
         }
 
@@ -187,6 +197,13 @@ namespace NuGetPush.Models
                     Dependees.Add(project);
                 }
             }
+        }
+
+        [MemberNotNullWhen(true, nameof(RemotePackageSource))]
+        public bool IsRemotePackageSourceLoaded()
+        {
+            return RemotePackageSource is not null
+                && KnownLatestRemoteVersionState == RemotePackageVersionRequestState.Loaded;
         }
 
         public override string ToString() => Name;

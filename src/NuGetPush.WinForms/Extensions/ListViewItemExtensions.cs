@@ -22,19 +22,24 @@ namespace NuGetPush.WinForms.Extensions
 
         public static ListViewItem Create(ItemTag tag)
         {
+            if (tag is null)
+            {
+                throw new ArgumentNullException(nameof(tag));
+            }
+
             var item = new ListViewItem(new[]
             {
-                string.Empty,
+                tag.Status.ToString(),
                 tag.ClassLibrary.Name,
                 tag.ClassLibrary.PackageVersion?.ToNormalizedString() ?? string.Empty,
-                string.Empty,
-                tag.ClassLibrary.RemotePackageSource is null ? "Offline" : string.Empty,
+                tag.ClassLibrary.KnownLatestLocalVersion?.ToNormalizedString() ?? string.Empty,
+                tag.ClassLibrary.GetRemotePackageString(),
             });
 
+            item.ImageIndex = (int)tag.Status;
             item.Tag = tag;
             tag.ListViewItem = item;
 
-            item.Update(true);
             return item;
         }
 
@@ -56,12 +61,8 @@ namespace NuGetPush.WinForms.Extensions
 
             item.ImageIndex = (int)tag.Status;
             item.SubItems[StatusColumnIndex].Text = tag.Status.ToString();
-            item.SubItems[LocalVersionColumnIndex].Text = tag.ClassLibrary.KnownLatestLocalVersion?.ToString() ?? string.Empty;
-
-            if (tag.ClassLibrary.RemotePackageSource is not null)
-            {
-                item.SubItems[NuGetVersionColumnIndex].Text = tag.ClassLibrary.KnownLatestNuGetVersion?.ToString() ?? string.Empty;
-            }
+            item.SubItems[LocalVersionColumnIndex].Text = tag.ClassLibrary.KnownLatestLocalVersion?.ToNormalizedString() ?? string.Empty;
+            item.SubItems[NuGetVersionColumnIndex].Text = tag.ClassLibrary.GetRemotePackageString();
         }
 
         public static int CompareTo(this ListViewItem item, ListViewItem other, int column)

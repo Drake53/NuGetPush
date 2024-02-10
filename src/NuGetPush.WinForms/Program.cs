@@ -57,16 +57,14 @@ namespace NuGetPush.WinForms
         {
             _form.OpenCloseSolutionButton.Enabled = false;
 
-            if (_solution is null)
-            {
-                await OpenSolutionAsync();
-            }
-            else
+            if (_solution is not null)
             {
                 CloseSolution();
+
+                return;
             }
 
-            _form.OpenCloseSolutionButton.Enabled = true;
+            await OpenSolutionAsync();
         }
 
         internal static async Task OnClickPackSelectedAsync()
@@ -415,6 +413,7 @@ namespace NuGetPush.WinForms
             finally
             {
                 _cancellationTokenSource?.Dispose();
+                _cancellationTokenSource = null;
             }
         }
 
@@ -531,17 +530,17 @@ namespace NuGetPush.WinForms
                         JsonSerializer.Serialize(jsonFileStream, packageSources);
                     }
 
-                    await _solution.ParseSolutionProjectsAsync(solutionFilterProjects, null, true, cancellationToken);
+                    await _solution.ParseSolutionProjectsAsync(solutionFilterProjects, true, cancellationToken);
 
                     _form.ProjectListView.LoadSolution(_solution);
 
-                    var index = 0;
-                    foreach (var project in _solution.Projects.OrderBy(project => project.Name))
+                    foreach (ListViewItem item in _form.ProjectListView.Items)
                     {
-                        await project.FindLatestVersionAsync(cancellationToken);
+                        var project = item.GetTag().ClassLibrary;
 
-                        var tag = new ItemTag(project, index++);
-                        _form.ProjectListView.Items.Add(ListViewItemExtensions.Create(tag));
+                        await project.FindLatestRemoteVersionAsync(true, cancellationToken);
+
+                        item.Update(true);
                     }
 
                     UpdateWorkButtonsEnabled(uncommittedChanges);
@@ -559,6 +558,7 @@ namespace NuGetPush.WinForms
                 finally
                 {
                     _cancellationTokenSource?.Dispose();
+                    _cancellationTokenSource = null;
                 }
             }
         }
@@ -604,6 +604,7 @@ namespace NuGetPush.WinForms
             _form.SolutionInputBrowseButton.Enabled = true;
 
             _form.OpenCloseSolutionButton.Text = "Open solution";
+            _form.OpenCloseSolutionButton.Enabled = true;
             _form.PackAllButton.Enabled = false;
             _form.PushAllButton.Enabled = false;
             _form.PackAndPushAllButton.Enabled = false;

@@ -9,6 +9,7 @@ using System.Windows.Forms;
 
 using NuGetPush.Models;
 using NuGetPush.WinForms.Enums;
+using NuGetPush.WinForms.Extensions;
 
 namespace NuGetPush.WinForms
 {
@@ -19,6 +20,7 @@ namespace NuGetPush.WinForms
             ClassLibrary = classLibrary;
             Index = index;
             SubmoduleName = submoduleName ?? string.Empty;
+            Status = classLibrary.RecalculateStatus();
         }
 
         public ClassLibrary ClassLibrary { get; }

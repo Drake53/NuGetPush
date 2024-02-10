@@ -59,7 +59,7 @@ namespace NuGetPush.Models
 
         public override string ToString() => Name;
 
-        public async Task ParseSolutionProjectsAsync(List<string>? solutionFilterProjects, string? nuGetLocalPackageSource, bool checkDependencies, CancellationToken cancellationToken)
+        public async Task ParseSolutionProjectsAsync(List<string>? solutionFilterProjects, bool checkDependencies, CancellationToken cancellationToken)
         {
             if (Projects is not null || TestProjects is not null)
             {
@@ -138,12 +138,9 @@ namespace NuGetPush.Models
                 }
             }
 
-            if (!string.IsNullOrEmpty(nuGetLocalPackageSource))
+            foreach (var project in Projects)
             {
-                foreach (var project in Projects)
-                {
-                    await project.FindLatestVersionAsync(cancellationToken);
-                }
+                project.FindLatestLocalVersion();
             }
 
             if (checkDependencies)

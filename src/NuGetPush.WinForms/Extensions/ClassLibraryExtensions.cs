@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
+using NuGetPush.Enums;
 using NuGetPush.Models;
 using NuGetPush.WinForms.Enums;
 
@@ -35,7 +36,7 @@ namespace NuGetPush.WinForms.Extensions
 
         public static bool CanPush(this ClassLibrary project, bool force)
         {
-            if (project.RemotePackageSource is null)
+            if (!project.IsRemotePackageSourceLoaded())
             {
                 return false;
             }
@@ -67,7 +68,7 @@ namespace NuGetPush.WinForms.Extensions
                 return ProjectStatus.Misconfigured;
             }
 
-            if (project.RemotePackageSource is null)
+            if (!project.IsRemotePackageSourceLoaded())
             {
                 if (project.PackageVersion == project.KnownLatestLocalVersion)
                 {
@@ -95,6 +96,18 @@ namespace NuGetPush.WinForms.Extensions
 
                 return ProjectStatus.ReadyToPack;
             }
+        }
+
+        public static string GetRemotePackageString(this ClassLibrary project)
+        {
+            if (project.PackageVersion is null)
+            {
+                return string.Empty;
+            }
+
+            return project.KnownLatestRemoteVersionState != RemotePackageVersionRequestState.Loaded
+                ? project.KnownLatestRemoteVersionState.ToString()
+                : project.KnownLatestNuGetVersion?.ToNormalizedString() ?? string.Empty;
         }
     }
 }

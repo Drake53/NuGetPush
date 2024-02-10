@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Drawing;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -107,6 +108,11 @@ namespace NuGetPush.WinForms.Controls
 
         public void LoadSolution(Solution solution)
         {
+            if (solution is null)
+            {
+                throw new ArgumentNullException(nameof(solution));
+            }
+
             if (_solution is not null)
             {
                 throw new InvalidOperationException();
@@ -116,6 +122,13 @@ namespace NuGetPush.WinForms.Controls
 
             ListViewItemSorter = _projectListSorter;
             ColumnClick += _projectListSorter.Sort;
+
+            var index = 0;
+            foreach (var project in _solution.Projects.OrderBy(project => project.Name))
+            {
+                var tag = new ItemTag(project, index++);
+                Items.Add(ListViewItemExtensions.Create(tag));
+            }
         }
 
         public void UnloadSolution()
