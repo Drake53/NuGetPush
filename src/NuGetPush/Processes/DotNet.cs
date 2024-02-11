@@ -26,8 +26,18 @@ namespace NuGetPush.Processes
             Environment.SetEnvironmentVariable(@"DOTNET_CLI_TELEMETRY_OPTOUT", "true");
         }
 
-        // https://blog.rsuter.com/missing-sdk-when-using-the-microsoft-build-package-in-net-core/
+        public static void SetMsBuildExePath(string msBuildPath)
+        {
+            Environment.SetEnvironmentVariable("MSBUILD_EXE_PATH", msBuildPath);
+        }
+
         public static async Task SetMsBuildExePathAsync(CancellationToken cancellationToken)
+        {
+            SetMsBuildExePath(await GetMsBuildExePathAsync(cancellationToken));
+        }
+
+        // https://blog.rsuter.com/missing-sdk-when-using-the-microsoft-build-package-in-net-core/
+        public static async Task<string> GetMsBuildExePathAsync(CancellationToken cancellationToken)
         {
             var processStartInfo = new ProcessStartInfo
             {
@@ -62,7 +72,7 @@ namespace NuGetPush.Processes
                 throw new InvalidOperationException($"No .NET SDK found which matches the current runtime version '{Environment.Version}'.");
             }
 
-            Environment.SetEnvironmentVariable("MSBUILD_EXE_PATH", sdks.OrderByDescending(sdk => sdk.SdkVersion).First().MSBuildPath);
+            return sdks.OrderByDescending(sdk => sdk.SdkVersion).First().MSBuildPath;
         }
 
         public static async Task<bool> PackAsync(ClassLibrary project, CancellationToken cancellationToken)
