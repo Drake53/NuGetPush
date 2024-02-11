@@ -221,7 +221,7 @@ namespace NuGetPush.WinForms
                 var packableProjects = new HashSet<ClassLibrary>();
                 foreach (var project in idleProjects)
                 {
-                    if (project.Dependencies.All(dependency => !idleProjects.Contains(dependency) || dependency.PackageVersion == dependency.KnownLatestLocalVersion || dependency.PackageVersion == dependency.KnownLatestNuGetVersion))
+                    if (project.Dependencies.All(dependency => !idleProjects.Contains(dependency) || dependency.PackageVersion == dependency.KnownLatestLocalVersion || dependency.PackageVersion == dependency.KnownLatestRemoteVersion))
                     {
                         packableProjects.Add(project);
                     }
@@ -327,9 +327,9 @@ namespace NuGetPush.WinForms
                 var uploadSucceeded = project.RemotePackageSource is not null && await project.RemotePackageSource.UploadPackageAsync(project, HandleDeviceLogin, cancellationToken);
                 if (uploadSucceeded)
                 {
-                    if (project.KnownLatestNuGetVersion is null || project.PackageVersion > project.KnownLatestNuGetVersion)
+                    if (project.KnownLatestRemoteVersion is null || project.PackageVersion > project.KnownLatestRemoteVersion)
                     {
-                        project.KnownLatestNuGetVersion = project.PackageVersion;
+                        project.KnownLatestRemoteVersion = project.PackageVersion;
                     }
                 }
                 else

@@ -87,7 +87,7 @@ namespace NuGetPush.Models
 
         public NuGetVersion? KnownLatestLocalVersion { get; set; }
 
-        public NuGetVersion? KnownLatestNuGetVersion { get; set; }
+        public NuGetVersion? KnownLatestRemoteVersion { get; set; }
 
         public RemotePackageVersionRequestState KnownLatestRemoteVersionState { get; set; }
 
@@ -123,12 +123,12 @@ namespace NuGetPush.Models
 
             var latestVersionResult = await RemotePackageSource.GetLatestRemoteNuGetVersionAsync(this, enableCache, cancellationToken);
 
-            KnownLatestNuGetVersion = latestVersionResult.Version;
+            KnownLatestRemoteVersion = latestVersionResult.Version;
             KnownLatestRemoteVersionState = latestVersionResult.State;
 
-            if (KnownLatestNuGetVersion is not null && (KnownLatestVersion is null || KnownLatestNuGetVersion > KnownLatestVersion))
+            if (KnownLatestRemoteVersion is not null && (KnownLatestVersion is null || KnownLatestRemoteVersion > KnownLatestVersion))
             {
-                KnownLatestVersion = KnownLatestNuGetVersion;
+                KnownLatestVersion = KnownLatestRemoteVersion;
             }
         }
 

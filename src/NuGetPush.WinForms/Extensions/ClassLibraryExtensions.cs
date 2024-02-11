@@ -42,8 +42,8 @@ namespace NuGetPush.WinForms.Extensions
             }
 
             return force
-                ? project.PackageVersion is not null && (project.KnownLatestNuGetVersion is null || project.PackageVersion > project.KnownLatestNuGetVersion)
-                : project.PackageVersion is not null && project.KnownLatestNuGetVersion is not null && project.PackageVersion > project.KnownLatestNuGetVersion;
+                ? project.PackageVersion is not null && (project.KnownLatestRemoteVersion is null || project.PackageVersion > project.KnownLatestRemoteVersion)
+                : project.PackageVersion is not null && project.KnownLatestRemoteVersion is not null && project.PackageVersion > project.KnownLatestRemoteVersion;
         }
 
         public static ProjectStatus RecalculateStatus(this ClassLibrary project)
@@ -58,7 +58,7 @@ namespace NuGetPush.WinForms.Extensions
                 return ProjectStatus.DependencyError;
             }
 
-            if (project.PackageVersion < project.KnownLatestLocalVersion || project.PackageVersion < project.KnownLatestNuGetVersion)
+            if (project.PackageVersion < project.KnownLatestLocalVersion || project.PackageVersion < project.KnownLatestRemoteVersion)
             {
                 return ProjectStatus.Outdated;
             }
@@ -79,17 +79,17 @@ namespace NuGetPush.WinForms.Extensions
             }
             else
             {
-                if (project.PackageVersion == project.KnownLatestLocalVersion && project.PackageVersion == project.KnownLatestNuGetVersion)
+                if (project.PackageVersion == project.KnownLatestLocalVersion && project.PackageVersion == project.KnownLatestRemoteVersion)
                 {
                     return ProjectStatus.UpToDate;
                 }
 
-                if (project.PackageVersion > project.KnownLatestLocalVersion && project.PackageVersion > project.KnownLatestNuGetVersion)
+                if (project.PackageVersion > project.KnownLatestLocalVersion && project.PackageVersion > project.KnownLatestRemoteVersion)
                 {
                     return ProjectStatus.Pending;
                 }
 
-                if (project.PackageVersion > project.KnownLatestNuGetVersion)
+                if (project.PackageVersion > project.KnownLatestRemoteVersion)
                 {
                     return ProjectStatus.ReadyToPush;
                 }
@@ -107,7 +107,7 @@ namespace NuGetPush.WinForms.Extensions
 
             return project.KnownLatestRemoteVersionState != RemotePackageVersionRequestState.Loaded
                 ? project.KnownLatestRemoteVersionState.ToString()
-                : project.KnownLatestNuGetVersion?.ToNormalizedString() ?? string.Empty;
+                : project.KnownLatestRemoteVersion?.ToNormalizedString() ?? string.Empty;
         }
     }
 }
