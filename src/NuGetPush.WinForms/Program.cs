@@ -35,9 +35,11 @@ namespace NuGetPush.WinForms
         private static CancellationTokenSource? _cancellationTokenSource;
 
         [STAThread]
-        private static void Main(string[] args)
+        private static async Task Main(string[] args)
         {
             PackageSourceStoreProvider.PackageSourceStore = new PackageSourceStore(true);
+
+            await DotNet.SetMsBuildExePathAsync(CancellationToken.None);
 
             _form = new MainForm();
 
@@ -530,7 +532,7 @@ namespace NuGetPush.WinForms
                         JsonSerializer.Serialize(jsonFileStream, packageSources);
                     }
 
-                    await _solution.ParseSolutionProjectsAsync(solutionFilterProjects, true, cancellationToken);
+                    _solution.ParseSolutionProjects(solutionFilterProjects, true);
 
                     _form.ProjectListView.LoadSolution(_solution);
 

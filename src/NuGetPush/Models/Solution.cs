@@ -59,7 +59,7 @@ namespace NuGetPush.Models
 
         public override string ToString() => Name;
 
-        public async Task ParseSolutionProjectsAsync(List<string>? solutionFilterProjects, bool checkDependencies, CancellationToken cancellationToken)
+        public void ParseSolutionProjects(List<string>? solutionFilterProjects, bool checkDependencies)
         {
             if (Projects is not null || TestProjects is not null)
             {
@@ -76,8 +76,6 @@ namespace NuGetPush.Models
             InvalidProjects = new();
 
             var solutionFile = SolutionFile.Parse(_solutionFileName);
-
-            await DotNet.SetMsBuildExePathAsync(cancellationToken);
 
             using var projectCollection = new ProjectCollection();
             var projectOptions = new ProjectOptions
