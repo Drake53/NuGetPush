@@ -16,6 +16,7 @@ using System.Windows.Forms;
 
 using NuGet.Configuration;
 
+using NuGetPush.Enums;
 using NuGetPush.Extensions;
 using NuGetPush.Helpers;
 using NuGetPush.Models;
@@ -32,7 +33,8 @@ namespace NuGetPush.WinForms
         private static Solution? _solution;
 
         private static MainForm _form;
-        private static CancellationTokenSource? _cancellationTokenSource;
+        private static CancellationTokenSource? _workCancellationTokenSource;
+        private static CancellationTokenSource? _backgroundWorkCancellationTokenSource;
 
         [STAThread]
         private static void Main(string[] args)
@@ -59,12 +61,70 @@ namespace NuGetPush.WinForms
 
             if (_solution is not null)
             {
+                _backgroundWorkCancellationTokenSource?.Cancel();
+
                 CloseSolution();
 
                 return;
             }
 
             await OpenSolutionAsync();
+
+            if (_solution is not null)
+            {
+                await LoadRemotePackageVersionsAsync();
+            }
+        }
+
+        private static async Task LoadRemotePackageVersionsAsync()
+        {
+            _backgroundWorkCancellationTokenSource = new CancellationTokenSource();
+            try
+            {
+                var cancellationToken = _backgroundWorkCancellationTokenSource.Token;
+                var isFirstRun = true;
+
+                var tasks = new List<Task>();
+
+                while (true)
+                {
+                    foreach (ListViewItem item in _form.ProjectListView.Items)
+                    {
+                        var tag = item.GetTag();
+                        var project = tag.ClassLibrary;
+
+                        if (!isFirstRun && tag.ClassLibrary.KnownLatestRemoteVersionState != RemotePackageVersionRequestState.Indexing)
+                        {
+                            continue;
+                        }
+
+                        tasks.Add(project.FindLatestRemoteVersionAsync(enableCache: isFirstRun, cancellationToken).ContinueWith(task => item.Update(true), TaskContinuationOptions.OnlyOnRanToCompletion));
+                    }
+
+                    if (tasks.Count > 0)
+                    {
+                        await Task.WhenAll(tasks);
+
+                        tasks.Clear();
+
+                        var uncommittedChanges = await Git.CheckUncommittedChangesAsync(_solution.RepositoryRoot, cancellationToken);
+
+                        UpdateWorkButtonsEnabled(uncommittedChanges);
+                    }
+
+                    isFirstRun = false;
+
+                    await Task.Delay(TimeSpan.FromMinutes(1), cancellationToken);
+                }
+            }
+            catch (TaskCanceledException)
+            {
+            }
+            finally
+            {
+                _backgroundWorkCancellationTokenSource?.Dispose();
+                _backgroundWorkCancellationTokenSource = null;
+            }
         }
 
         internal static async Task OnClickPackSelectedAsync()
@@ -172,7 +232,7 @@ namespace NuGetPush.WinForms
 
         private static void OnClickCancel(object? sender, EventArgs e)
         {
-            _cancellationTokenSource?.Cancel();
+            _workCancellationTokenSource?.Cancel();
         }
 
         private static List<ClassLibrary> GetSelectedProjects()
@@ -327,10 +387,7 @@ namespace NuGetPush.WinForms
                 var uploadSucceeded = project.RemotePackageSource is not null && await project.RemotePackageSource.UploadPackageAsync(project, HandleDeviceLogin, cancellationToken);
                 if (uploadSucceeded)
                 {
-                    if (project.KnownLatestRemoteVersion is null || project.PackageVersion > project.KnownLatestRemoteVersion)
-                    {
-                        project.KnownLatestRemoteVersion = project.PackageVersion;
-                    }
+                    project.KnownLatestRemoteVersionState = RemotePackageVersionRequestState.Indexing;
                 }
                 else
                 {
@@ -360,7 +417,7 @@ namespace NuGetPush.WinForms
             var dialogResult = deviceLoginForm.ShowDialog();
             if (dialogResult != DialogResult.OK)
             {
-                _cancellationTokenSource?.Cancel();
+                _workCancellationTokenSource?.Cancel();
             }
         }
 
@@ -373,7 +430,7 @@ namespace NuGetPush.WinForms
 
         private static CancellationToken StartWork()
         {
-            _cancellationTokenSource = new CancellationTokenSource();
+            _workCancellationTokenSource = new CancellationTokenSource();
 
             _form.ProjectListView.DisableContextMenuButtons();
             _form.OpenCloseSolutionButton.Enabled = false;
@@ -382,14 +439,14 @@ namespace NuGetPush.WinForms
             _form.PackAndPushAllButton.Enabled = false;
             _form.CancelWorkButton.Enabled = true;
 
-            return _cancellationTokenSource.Token;
+            return _workCancellationTokenSource.Token;
         }
 
         private static async Task FinishWorkAsync(string message, CancellationToken cancellationToken)
         {
             try
             {
-                if (_cancellationTokenSource?.IsCancellationRequested == true)
+                if (_workCancellationTokenSource?.IsCancellationRequested == true)
                 {
                     MessageBox.Show("Canceled", string.Empty, MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
@@ -412,8 +469,8 @@ namespace NuGetPush.WinForms
             }
             finally
             {
-                _cancellationTokenSource?.Dispose();
-                _cancellationTokenSource = null;
+                _workCancellationTokenSource?.Dispose();
+                _workCancellationTokenSource = null;
             }
         }
 
@@ -536,15 +593,6 @@ namespace NuGetPush.WinForms
 
                     _form.ProjectListView.LoadSolution(_solution);
 
-                    foreach (ListViewItem item in _form.ProjectListView.Items)
-                    {
-                        var project = item.GetTag().ClassLibrary;
-
-                        await project.FindLatestRemoteVersionAsync(true, cancellationToken);
-
-                        item.Update(true);
-                    }
-
                     UpdateWorkButtonsEnabled(uncommittedChanges);
                 }
                 catch (TaskCanceledException)
@@ -559,8 +607,8 @@ namespace NuGetPush.WinForms
                 }
                 finally
                 {
-                    _cancellationTokenSource?.Dispose();
-                    _cancellationTokenSource = null;
+                    _workCancellationTokenSource?.Dispose();
+                    _workCancellationTokenSource = null;
                 }
             }
         }

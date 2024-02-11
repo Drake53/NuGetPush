@@ -67,6 +67,9 @@ namespace NuGetPush.Extensions
 
             try
             {
+#if MOCK_REMOTE
+                return new LatestPackageVersionResult(enableCache ? null : classLibrary.KnownLatestLocalVersion);
+#else
                 using var sourceCacheContext = new SourceCacheContext();
 
                 if (!enableCache)
@@ -80,6 +83,7 @@ namespace NuGetPush.Extensions
                 var latestVersion = packageVersions.Max();
 
                 return new LatestPackageVersionResult(latestVersion);
+#endif
             }
             catch (FatalProtocolException fatalProtocolException) when (IsUnauthorizedException(fatalProtocolException))
             {
@@ -152,6 +156,9 @@ namespace NuGetPush.Extensions
             }
             else
             {
+#if MOCK_REMOTE
+                return Task.Delay(2000, cancellationToken).ContinueWith(_ => true);
+#else
                 var packageOutputPath = classLibrary.PackageOutputPath;
                 if (!Directory.Exists(packageOutputPath))
                 {
@@ -191,6 +198,7 @@ namespace NuGetPush.Extensions
                 }
 
                 return DotNet.PushAsync(packageFilePath, apiKey, packageSource.Source, deviceLoginCallback, cancellationToken);
+#endif
             }
         }
 

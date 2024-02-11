@@ -14,5 +14,6 @@ namespace NuGetPush.Enums
         Loaded,
         Unauthorized,
         Error,
+        Indexing,
     }
 }

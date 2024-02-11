@@ -5,8 +5,6 @@
 // </copyright>
 // ------------------------------------------------------------------------------
 
-using System;
-
 using NuGet.Versioning;
 
 using NuGetPush.Enums;
@@ -18,13 +16,8 @@ namespace NuGetPush.Models
         private static readonly LatestPackageVersionResult _unauthorizedResult = new(RemotePackageVersionRequestState.Unauthorized);
         private static readonly LatestPackageVersionResult _errorResult = new(RemotePackageVersionRequestState.Error);
 
-        public LatestPackageVersionResult(NuGetVersion version)
+        public LatestPackageVersionResult(NuGetVersion? version)
         {
-            if (version is null)
-            {
-                throw new ArgumentNullException(nameof(version));
-            }
-
             Version = version;
             State = RemotePackageVersionRequestState.Loaded;
         }
