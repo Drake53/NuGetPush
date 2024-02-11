@@ -19,7 +19,7 @@ namespace NuGetPush.WinForms.Forms
     [DesignerCategory("")]
     internal sealed class MainForm : Form
     {
-        private const string Title = "NuGet Push v1.2.0";
+        private const string Title = "NuGet Push v1.3.0";
 
         private readonly TextBox _solutionInput;
         private readonly Button _solutionInputBrowseButton;
@@ -124,6 +124,7 @@ namespace NuGetPush.WinForms.Forms
                 {
                     CheckFileExists = false,
                 };
+
                 openFileDialog.Filter = string.Join('|', new[]
                 {
                     "Solution or Solution Filter|*.sln;*.slnf",
@@ -131,6 +132,7 @@ namespace NuGetPush.WinForms.Forms
                     "Solution Filter|*.slnf",
                     "All files|*.*",
                 });
+
                 var openFileDialogResult = openFileDialog.ShowDialog();
                 if (openFileDialogResult == DialogResult.OK)
                 {
