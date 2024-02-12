@@ -50,6 +50,7 @@ namespace NuGetPush.Extensions
             this PackageSource packageSource,
             ClassLibrary classLibrary,
             bool enableCache,
+            Func<PackageSource, CancellationToken, Task<bool>>? authenticationCallback,
             CancellationToken cancellationToken)
         {
             if (packageSource.IsLocal)
@@ -57,42 +58,54 @@ namespace NuGetPush.Extensions
                 throw new ArgumentException("Package source must not be local.", nameof(packageSource));
             }
 
-            var requiresAuthentication = PackageSourceStoreProvider.PackageSourceStore.GetPackageSourceRequiresAuthentication(packageSource, out var credentials);
-            if (requiresAuthentication && credentials is null)
-            {
-                return LatestPackageVersionResult.UnauthorizedResult;
-            }
-
-            packageSource.Credentials = credentials;
-
             try
             {
+                while (true)
+                {
+                    try
+                    {
+                        if (!packageSource.IsEnabled)
+                        {
+                            return LatestPackageVersionResult.UnauthorizedResult;
+                        }
+
 #if MOCK_REMOTE
-                return new LatestPackageVersionResult(enableCache ? null : classLibrary.KnownLatestLocalVersion);
+                        const string MockUsername = "user";
+
+                        if (!string.Equals(packageSource.Credentials?.Username, MockUsername, StringComparison.Ordinal))
+                        {
+                            await Task.Delay(1000, cancellationToken);
+
+                            throw new FatalProtocolException("Unauthorized", new HttpRequestException(null, null, HttpStatusCode.Unauthorized));
+                        }
+
+                        return new LatestPackageVersionResult(enableCache ? null : classLibrary.KnownLatestLocalVersion);
 #else
-                using var sourceCacheContext = new SourceCacheContext();
+                        using var sourceCacheContext = new SourceCacheContext();
 
-                if (!enableCache)
-                {
-                    sourceCacheContext.NoCache = true;
-                    sourceCacheContext.RefreshMemoryCache = true;
-                }
+                        if (!enableCache)
+                        {
+                            sourceCacheContext.NoCache = true;
+                            sourceCacheContext.RefreshMemoryCache = true;
+                        }
 
-                var packageByIdResource = await PackageSourceStoreProvider.PackageSourceStore.GetPackageByIdResourceAsync(packageSource, cancellationToken);
-                var packageVersions = await packageByIdResource.GetAllVersionsAsync(classLibrary.PackageName, sourceCacheContext, NullLogger.Instance, cancellationToken);
-                var latestVersion = packageVersions.Max();
+                        var packageByIdResource = await PackageSourceStoreProvider.PackageSourceStore.GetPackageByIdResourceAsync(packageSource, cancellationToken);
+                        var packageVersions = await packageByIdResource.GetAllVersionsAsync(classLibrary.PackageName, sourceCacheContext, NullLogger.Instance, cancellationToken);
+                        var latestVersion = packageVersions.Max();
 
-                return new LatestPackageVersionResult(latestVersion);
+                        return new LatestPackageVersionResult(latestVersion);
 #endif
-            }
-            catch (FatalProtocolException fatalProtocolException) when (IsUnauthorizedException(fatalProtocolException))
-            {
-                if (PackageSourceStoreProvider.PackageSourceStore.SetPackageSourceRequiresAuthentication(packageSource, true))
-                {
-                    return await packageSource.GetLatestRemoteNuGetVersionAsync(classLibrary, enableCache, cancellationToken);
+                    }
+                    catch (FatalProtocolException fatalProtocolException) when (IsUnauthorizedException(fatalProtocolException))
+                    {
+                        if (authenticationCallback is null ||
+                            (!await authenticationCallback.Invoke(packageSource, cancellationToken)) ||
+                            packageSource.Credentials is null)
+                        {
+                            packageSource.IsEnabled = false;
+                        }
+                    }
                 }
-
-                return LatestPackageVersionResult.UnauthorizedResult;
             }
             catch (Exception exception) when (exception is not TaskCanceledException)
             {

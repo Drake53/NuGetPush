@@ -40,6 +40,7 @@ namespace NuGetPush.WinForms.Forms
                 PlaceholderText = "User name...",
                 Dock = DockStyle.Top,
                 TabIndex = 0,
+                Text = packageSource.Credentials?.Username ?? string.Empty,
             };
 
             _accessTokenTextBox = new TextBox

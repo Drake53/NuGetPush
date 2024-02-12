@@ -24,6 +24,7 @@ using NuGetPush.Processes;
 using NuGetPush.WinForms.Enums;
 using NuGetPush.WinForms.Extensions;
 using NuGetPush.WinForms.Forms;
+using NuGetPush.WinForms.Helpers;
 using NuGetPush.WinForms.Models;
 
 namespace NuGetPush.WinForms
@@ -72,6 +73,8 @@ namespace NuGetPush.WinForms
 
             if (_solution is not null)
             {
+                AuthenticationManager.Reset();
+
                 await LoadRemotePackageVersionsAsync();
             }
         }
@@ -98,7 +101,8 @@ namespace NuGetPush.WinForms
                             continue;
                         }
 
-                        tasks.Add(project.FindLatestRemoteVersionAsync(enableCache: isFirstRun, cancellationToken).ContinueWith(task => item.Update(true), TaskContinuationOptions.OnlyOnRanToCompletion));
+                        tasks.Add(project.FindLatestRemoteVersionAsync(enableCache: isFirstRun, AuthenticationManager.HandleAuthenticationAsync, cancellationToken)
+                            .ContinueWith(task => item.Update(true), TaskContinuationOptions.OnlyOnRanToCompletion));
                     }
 
                     if (tasks.Count > 0)

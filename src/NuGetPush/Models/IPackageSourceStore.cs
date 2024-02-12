@@ -22,8 +22,10 @@ namespace NuGetPush.Models
         [Obsolete]
         bool GetIsPackageSourceEnabled(IPackageSource packageSource);
 
+        [Obsolete]
         bool GetPackageSourceRequiresAuthentication(PackageSource packageSource, out PackageSourceCredential? credentials);
 
+        [Obsolete]
         bool SetPackageSourceRequiresAuthentication(PackageSource packageSource, bool requiresAuthentication);
 
         Task<FindPackageByIdResource> GetPackageByIdResourceAsync(PackageSource packageSource, CancellationToken cancellationToken);
