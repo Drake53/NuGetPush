@@ -101,6 +101,8 @@ namespace NuGetPush.Extensions
                     throw;
                 }
 
+                classLibrary.Diagnostics.Add(exception.Message);
+
                 return LatestPackageVersionResult.ErrorResult;
             }
         }
