@@ -113,7 +113,7 @@ namespace NuGetPush.Processes
         }
 
         // https://docs.microsoft.com/en-us/nuget/nuget-org/publish-a-package
-        public static async Task<bool> PushAsync(string fileName, string nuGetApiKey, string nuGetSource, Action<string> deviceLoginCallback, CancellationToken cancellationToken)
+        public static async Task<bool> PushAsync(string fileName, string nuGetApiKey, string nuGetSource, Func<string, Task<bool>> deviceLoginCallback, CancellationToken cancellationToken)
         {
             var processStartInfo = new ProcessStartInfo
             {
@@ -127,7 +127,7 @@ namespace NuGetPush.Processes
 
             if (dotnetPushProcess.StandardOutput.TryReadDeviceLogin(out var deviceLoginLine))
             {
-                deviceLoginCallback.Invoke(deviceLoginLine);
+                await deviceLoginCallback.Invoke(deviceLoginLine);
             }
 
             await dotnetPushProcess.WaitForExitAsync(cancellationToken);

@@ -42,6 +42,12 @@ namespace NuGetPush.WinForms.Forms
                 TabIndex = 0,
             };
 
+            if (packageSource.Credentials is not null &&
+                packageSource.Credentials.IsPasswordClearText)
+            {
+                _apiKeyTextBox.Text = packageSource.Credentials.Password;
+            }
+
             _okButton = new Button
             {
                 Text = "OK",

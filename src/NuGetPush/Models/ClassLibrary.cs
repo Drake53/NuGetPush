@@ -114,14 +114,14 @@ namespace NuGetPush.Models
             }
         }
 
-        public async Task FindLatestRemoteVersionAsync(bool enableCache, Func<PackageSource, CancellationToken, Task<bool>>? authenticationCallback, CancellationToken cancellationToken)
+        public async Task FindLatestRemoteVersionAsync(bool enableCache, IRemoteConnectionManager remoteConnectionManager, CancellationToken cancellationToken)
         {
             if (PackageVersion is null || RemotePackageSource is null)
             {
                 return;
             }
 
-            var latestVersionResult = await RemotePackageSource.GetLatestRemoteNuGetVersionAsync(this, enableCache, authenticationCallback, cancellationToken);
+            var latestVersionResult = await RemotePackageSource.GetLatestRemoteNuGetVersionAsync(this, enableCache, remoteConnectionManager, cancellationToken);
 
             KnownLatestRemoteVersion = latestVersionResult.Version;
             KnownLatestRemoteVersionState = latestVersionResult.State;

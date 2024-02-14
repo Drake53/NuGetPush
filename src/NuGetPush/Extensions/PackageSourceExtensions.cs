@@ -50,7 +50,7 @@ namespace NuGetPush.Extensions
             this PackageSource packageSource,
             ClassLibrary classLibrary,
             bool enableCache,
-            Func<PackageSource, CancellationToken, Task<bool>>? authenticationCallback,
+            IRemoteConnectionManager remoteConnectionManager,
             CancellationToken cancellationToken)
         {
             if (packageSource.IsLocal)
@@ -60,161 +60,133 @@ namespace NuGetPush.Extensions
 
             try
             {
-                while (true)
-                {
-                    try
-                    {
-                        if (!packageSource.IsEnabled)
-                        {
-                            return LatestPackageVersionResult.UnauthorizedResult;
-                        }
-
 #if MOCK_REMOTE
-                        const string MockUsername = "user";
-
-                        if (!string.Equals(packageSource.Credentials?.Username, MockUsername, StringComparison.Ordinal))
-                        {
-                            await Task.Delay(1000, cancellationToken);
-
-                            throw new FatalProtocolException("Unauthorized", new HttpRequestException(null, null, HttpStatusCode.Unauthorized));
-                        }
-
-                        return new LatestPackageVersionResult(enableCache ? null : classLibrary.KnownLatestLocalVersion);
+                return new LatestPackageVersionResult(enableCache ? null : classLibrary.KnownLatestLocalVersion);
 #else
-                        using var sourceCacheContext = new SourceCacheContext();
+                using var sourceCacheContext = new SourceCacheContext();
 
-                        if (!enableCache)
-                        {
-                            sourceCacheContext.NoCache = true;
-                            sourceCacheContext.RefreshMemoryCache = true;
-                        }
-
-                        var packageByIdResource = await PackageSourceStoreProvider.PackageSourceStore.GetPackageByIdResourceAsync(packageSource, cancellationToken);
-                        var packageVersions = await packageByIdResource.GetAllVersionsAsync(classLibrary.PackageName, sourceCacheContext, NullLogger.Instance, cancellationToken);
-                        var latestVersion = packageVersions.Max();
-
-                        return new LatestPackageVersionResult(latestVersion);
-#endif
-                    }
-                    catch (FatalProtocolException fatalProtocolException) when (IsUnauthorizedException(fatalProtocolException))
-                    {
-                        if (authenticationCallback is null ||
-                            (!await authenticationCallback.Invoke(packageSource, cancellationToken)) ||
-                            packageSource.Credentials is null)
-                        {
-                            packageSource.IsEnabled = false;
-                        }
-                    }
+                if (!enableCache)
+                {
+                    sourceCacheContext.NoCache = true;
+                    sourceCacheContext.RefreshMemoryCache = true;
                 }
+
+                var packageVersions = await remoteConnectionManager.FindPackageByIdResource.GetAllVersionsAsync(classLibrary.PackageName, sourceCacheContext, NullLogger.Instance, cancellationToken);
+                var latestVersion = packageVersions.Max();
+
+                return new LatestPackageVersionResult(latestVersion);
+#endif
             }
             catch (Exception exception) when (exception is not TaskCanceledException)
             {
-                if (cancellationToken.IsCancellationRequested)
-                {
-                    throw;
-                }
-
                 classLibrary.Diagnostics.Add(exception.Message);
 
                 return LatestPackageVersionResult.ErrorResult;
             }
         }
 
-        public static Task<bool> UploadPackageAsync(
+        public static bool MoveLocalPackage(
+            this PackageSource packageSource,
+            ClassLibrary classLibrary)
+        {
+            if (!packageSource.IsLocal)
+            {
+                throw new ArgumentException("Package source must be local.", nameof(packageSource));
+            }
+
+            var packageOutputPath = classLibrary.PackageOutputPath;
+            if (!Directory.Exists(packageOutputPath))
+            {
+                return false;
+            }
+
+            var fileName = $"{classLibrary.PackageName}.{classLibrary.PackageVersion.ToNormalizedString()}";
+            var packageFileName = $"{fileName}.nupkg";
+            var packageFilePath = Path.Combine(packageOutputPath, packageFileName);
+
+            if (!File.Exists(packageFilePath))
+            {
+                throw new FileNotFoundException($"Could not find '{packageFileName}'.");
+            }
+
+            var symbolsFileName = $"{fileName}.snupkg";
+            var symbolsFilePath = Path.Combine(packageOutputPath, symbolsFileName);
+
+            var includeSymbols = bool.TryParse(classLibrary.Project.GetProperty("IncludeSymbols")?.EvaluatedValue, out var b) && b;
+            var symbolsFormat = classLibrary.Project.GetProperty("SymbolPackageFormat")?.EvaluatedValue;
+
+            var expectSymbols = includeSymbols && string.Equals(symbolsFormat, "snupkg", StringComparison.OrdinalIgnoreCase);
+            if (expectSymbols && !File.Exists(symbolsFilePath))
+            {
+                throw new FileNotFoundException($"Could not find '{symbolsFileName}'.");
+            }
+
+            var targetFolder = Path.Combine(packageSource.Source, classLibrary.PackageName.ToLowerInvariant());
+            if (!Directory.Exists(targetFolder))
+            {
+                Directory.CreateDirectory(targetFolder);
+            }
+
+            File.Copy(packageFilePath, Path.Combine(targetFolder, packageFileName), overwrite: false);
+            if (expectSymbols)
+            {
+                File.Copy(symbolsFilePath, Path.Combine(targetFolder, symbolsFileName), overwrite: false);
+            }
+
+            return true;
+        }
+
+        public static async Task<bool> UploadPackageAsync(
             this PackageSource packageSource,
             ClassLibrary classLibrary,
-            Action<string>? deviceLoginCallback,
+            IRemoteConnectionManager remoteConnectionManager,
             CancellationToken cancellationToken)
         {
             if (packageSource.IsLocal)
             {
-                var packageOutputPath = classLibrary.PackageOutputPath;
-                if (!Directory.Exists(packageOutputPath))
-                {
-                    return Task.FromResult(false);
-                }
-
-                var fileName = $"{classLibrary.PackageName}.{classLibrary.PackageVersion.ToNormalizedString()}";
-                var packageFileName = $"{fileName}.nupkg";
-                var packageFilePath = Path.Combine(packageOutputPath, packageFileName);
-
-                if (!File.Exists(packageFilePath))
-                {
-                    throw new FileNotFoundException($"Could not find '{packageFileName}'.");
-                }
-
-                var symbolsFileName = $"{fileName}.snupkg";
-                var symbolsFilePath = Path.Combine(packageOutputPath, symbolsFileName);
-
-                var includeSymbols = bool.TryParse(classLibrary.Project.GetProperty("IncludeSymbols")?.EvaluatedValue, out var b) && b;
-                var symbolsFormat = classLibrary.Project.GetProperty("SymbolPackageFormat")?.EvaluatedValue;
-
-                var expectSymbols = includeSymbols && string.Equals(symbolsFormat, "snupkg", StringComparison.OrdinalIgnoreCase);
-                if (expectSymbols && !File.Exists(symbolsFilePath))
-                {
-                    throw new FileNotFoundException($"Could not find '{symbolsFileName}'.");
-                }
-
-                var targetFolder = Path.Combine(packageSource.Source, classLibrary.PackageName.ToLowerInvariant());
-                if (!Directory.Exists(targetFolder))
-                {
-                    Directory.CreateDirectory(targetFolder);
-                }
-
-                File.Copy(packageFilePath, Path.Combine(targetFolder, packageFileName), overwrite: false);
-                if (expectSymbols)
-                {
-                    File.Copy(symbolsFilePath, Path.Combine(targetFolder, symbolsFileName), overwrite: false);
-                }
-
-                return Task.FromResult(true);
+                throw new ArgumentException("Package source must not be local.", nameof(packageSource));
             }
-            else
-            {
+
 #if MOCK_REMOTE
-                return Task.Delay(2000, cancellationToken).ContinueWith(_ => true);
+            await Task.Delay(2000, cancellationToken);
+
+            return true;
 #else
-                var packageOutputPath = classLibrary.PackageOutputPath;
-                if (!Directory.Exists(packageOutputPath))
-                {
-                    return Task.FromResult(false);
-                }
-
-                var fileName = $"{classLibrary.PackageName}.{classLibrary.PackageVersion.ToNormalizedString()}";
-                var packageFileName = $"{fileName}.nupkg";
-                var packageFilePath = Path.Combine(packageOutputPath, packageFileName);
-
-                if (!File.Exists(packageFilePath))
-                {
-                    throw new FileNotFoundException($"Could not find '{packageFileName}'.");
-                }
-
-                var symbolsFileName = $"{fileName}.snupkg";
-                var symbolsFilePath = Path.Combine(packageOutputPath, symbolsFileName);
-
-                var includeSymbols = bool.TryParse(classLibrary.Project.GetProperty("IncludeSymbols")?.EvaluatedValue, out var b) && b;
-                var symbolsFormat = classLibrary.Project.GetProperty("SymbolPackageFormat")?.EvaluatedValue;
-
-                var expectSymbols = includeSymbols && string.Equals(symbolsFormat, "snupkg", StringComparison.OrdinalIgnoreCase);
-                if (expectSymbols && !File.Exists(symbolsFilePath))
-                {
-                    throw new FileNotFoundException($"Could not find '{symbolsFileName}'.");
-                }
-
-                if (packageSource.Credentials is not null)
-                {
-                    return DotNet.PushAsync(packageFilePath, packageSource.Credentials.Password, packageSource.Source, deviceLoginCallback, cancellationToken);
-                }
-
-                var apiKey = PackageSourceStoreProvider.PackageSourceStore?.GetOrAddApiKey(packageSource);
-                if (string.IsNullOrEmpty(apiKey))
-                {
-                    return Task.FromResult(false);
-                }
-
-                return DotNet.PushAsync(packageFilePath, apiKey, packageSource.Source, deviceLoginCallback, cancellationToken);
-#endif
+            var packageOutputPath = classLibrary.PackageOutputPath;
+            if (!Directory.Exists(packageOutputPath))
+            {
+                return false;
             }
+
+            var fileName = $"{classLibrary.PackageName}.{classLibrary.PackageVersion.ToNormalizedString()}";
+            var packageFileName = $"{fileName}.nupkg";
+            var packageFilePath = Path.Combine(packageOutputPath, packageFileName);
+
+            if (!File.Exists(packageFilePath))
+            {
+                throw new FileNotFoundException($"Could not find '{packageFileName}'.");
+            }
+
+            var symbolsFileName = $"{fileName}.snupkg";
+            var symbolsFilePath = Path.Combine(packageOutputPath, symbolsFileName);
+
+            var includeSymbols = bool.TryParse(classLibrary.Project.GetProperty("IncludeSymbols")?.EvaluatedValue, out var b) && b;
+            var symbolsFormat = classLibrary.Project.GetProperty("SymbolPackageFormat")?.EvaluatedValue;
+
+            var expectSymbols = includeSymbols && string.Equals(symbolsFormat, "snupkg", StringComparison.OrdinalIgnoreCase);
+            if (expectSymbols && !File.Exists(symbolsFilePath))
+            {
+                throw new FileNotFoundException($"Could not find '{symbolsFileName}'.");
+            }
+
+            var apiKey = await remoteConnectionManager.TryGetApiKeyAsync();
+            if (string.IsNullOrEmpty(apiKey))
+            {
+                return false;
+            }
+
+            return await DotNet.PushAsync(packageFilePath, apiKey, packageSource.Source, remoteConnectionManager.HandleDeviceLoginAsync, cancellationToken);
+#endif
         }
 
         private static NuGetVersion GetNuGetVersionFromFile(ClassLibrary classLibrary, string filePath)

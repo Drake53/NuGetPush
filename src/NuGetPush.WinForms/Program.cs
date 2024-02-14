@@ -36,12 +36,11 @@ namespace NuGetPush.WinForms
         private static MainForm _form;
         private static CancellationTokenSource? _workCancellationTokenSource;
         private static CancellationTokenSource? _backgroundWorkCancellationTokenSource;
+        private static IRemoteConnectionManager? _remoteConnectionManager;
 
         [STAThread]
         private static void Main(string[] args)
         {
-            PackageSourceStoreProvider.PackageSourceStore = new PackageSourceStore(true);
-
             _form = new MainForm();
 
             _form.OpenCloseSolutionButton.Click += async (s, e) => await OnClickOpenCloseSolutionAsync();
@@ -71,10 +70,8 @@ namespace NuGetPush.WinForms
 
             await OpenSolutionAsync();
 
-            if (_solution is not null)
+            if (_solution?.SelectedRemotePackageSource is not null)
             {
-                AuthenticationManager.Reset();
-
                 await LoadRemotePackageVersionsAsync();
             }
         }
@@ -85,6 +82,30 @@ namespace NuGetPush.WinForms
             try
             {
                 var cancellationToken = _backgroundWorkCancellationTokenSource.Token;
+
+                _remoteConnectionManager = await RemoteConnectionManagerFactory.TryCreateAsync(_solution.SelectedRemotePackageSource, cancellationToken);
+                if (_remoteConnectionManager.State != RemoteConnectionState.Connected)
+                {
+                    var state = _remoteConnectionManager.State == RemoteConnectionState.Unauthorized
+                        ? RemotePackageVersionRequestState.Unauthorized
+                        : RemotePackageVersionRequestState.Error;
+
+                    foreach (ListViewItem item in _form.ProjectListView.Items)
+                    {
+                        var tag = item.GetTag();
+                        var project = tag.ClassLibrary;
+
+                        if (project.KnownLatestRemoteVersionState == RemotePackageVersionRequestState.Loading)
+                        {
+                            project.KnownLatestRemoteVersionState = state;
+
+                            item.Update();
+                        }
+                    }
+
+                    return;
+                }
+
                 var isFirstRun = true;
 
                 var tasks = new List<Task>();
@@ -101,7 +122,7 @@ namespace NuGetPush.WinForms
                             continue;
                         }
 
-                        tasks.Add(project.FindLatestRemoteVersionAsync(enableCache: isFirstRun, AuthenticationManager.HandleAuthenticationAsync, cancellationToken)
+                        tasks.Add(project.FindLatestRemoteVersionAsync(enableCache: isFirstRun, _remoteConnectionManager, cancellationToken)
                             .ContinueWith(task => item.Update(true), TaskContinuationOptions.OnlyOnRanToCompletion));
                     }
 
@@ -309,8 +330,8 @@ namespace NuGetPush.WinForms
 
                 foreach (var project in projectBuildsSucceeded)
                 {
-                    var uploadSucceeded = await project.LocalPackageSource.UploadPackageAsync(project, null, cancellationToken);
-                    if (uploadSucceeded)
+                    var moveSucceeded = project.LocalPackageSource.MoveLocalPackage(project);
+                    if (moveSucceeded)
                     {
                         if (project.KnownLatestLocalVersion is null || project.PackageVersion > project.KnownLatestLocalVersion)
                         {
@@ -383,19 +404,23 @@ namespace NuGetPush.WinForms
 
             _form.ProjectListView.Sort();
 
-            var testFailed = new HashSet<ClassLibrary>();
-            var uploadFailed = new HashSet<ClassLibrary>();
+            var uploadedProjects = new HashSet<ClassLibrary>();
 
             foreach (var project in result)
             {
-                var uploadSucceeded = project.RemotePackageSource is not null && await project.RemotePackageSource.UploadPackageAsync(project, HandleDeviceLogin, cancellationToken);
+                var uploadSucceeded = project.RemotePackageSource is not null && await project.RemotePackageSource.UploadPackageAsync(project, _remoteConnectionManager, cancellationToken);
+
+                _remoteConnectionManager.SetApiKeyValid(uploadSucceeded);
+
                 if (uploadSucceeded)
                 {
                     project.KnownLatestRemoteVersionState = RemotePackageVersionRequestState.Indexing;
+
+                    uploadedProjects.Add(project);
                 }
                 else
                 {
-                    uploadFailed.Add(project);
+                    break;
                 }
             }
 
@@ -405,24 +430,13 @@ namespace NuGetPush.WinForms
 
                 if (result.Contains(tag.ClassLibrary))
                 {
-                    item.Update(testFailed.Contains(tag.ClassLibrary) ? ProjectStatus.TestFailed : uploadFailed.Contains(tag.ClassLibrary) ? ProjectStatus.PushError : ProjectStatus.Pushed);
+                    item.Update(uploadedProjects.Contains(tag.ClassLibrary) ? ProjectStatus.Pushed : ProjectStatus.PushError);
                 }
             }
 
             _form.ProjectListView.Sort();
 
             return result;
-        }
-
-        private static void HandleDeviceLogin(string deviceLoginLine)
-        {
-            using var deviceLoginForm = new DeviceLoginForm(deviceLoginLine);
-
-            var dialogResult = deviceLoginForm.ShowDialog();
-            if (dialogResult != DialogResult.OK)
-            {
-                _workCancellationTokenSource?.Cancel();
-            }
         }
 
         private static void UpdateDiagnosticsDisplay()
@@ -667,8 +681,6 @@ namespace NuGetPush.WinForms
             _form.ProjectListView.UnloadSolution();
 
             _form.DiagnosticsDisplay.Text = string.Empty;
-
-            PackageSourceStoreProvider.PackageSourceStore.ResetPackageSourcesEnabled();
         }
     }
 }

@@ -5,13 +5,10 @@
 // </copyright>
 // ------------------------------------------------------------------------------
 
-using System;
 using System.Collections.Generic;
 using System.Linq;
 
 using NuGet.Configuration;
-
-using NuGetPush.Models;
 
 namespace NuGetPush.Helpers
 {
@@ -24,25 +21,6 @@ namespace NuGetPush.Helpers
             return PackageSourceProvider.LoadPackageSources(nuGetSettings)
                 .Where(packageSource => packageSource.IsEnabled)
                 .ToList();
-        }
-
-        [Obsolete]
-        public static List<IPackageSource> GetPackageSources(ClassLibrary project)
-        {
-            var nuGetSettings = Settings.LoadDefaultSettings(project.ProjectDirectory);
-
-            return PackageSourceProvider.LoadPackageSources(nuGetSettings)
-                .Where(packageSource => packageSource.IsEnabled)
-                .Select(packageSource => GetPackageSource(packageSource, project))
-                .ToList();
-        }
-
-        [Obsolete]
-        private static IPackageSource GetPackageSource(PackageSource packageSource, ClassLibrary project)
-        {
-            return packageSource.IsLocal
-                ? new LocalPackageSource(packageSource, project)
-                : new RemotePackageSource(packageSource, project);
         }
     }
 }
