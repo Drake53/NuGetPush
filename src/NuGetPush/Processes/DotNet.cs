@@ -86,13 +86,19 @@ namespace NuGetPush.Processes
             };
 
             using var dotnetPackProcess = Process.Start(processStartInfo);
-            await dotnetPackProcess.WaitForExitAsync(cancellationToken);
 
-            var output = await dotnetPackProcess.StandardOutput.ReadToEndAsync();
-            if (!string.IsNullOrEmpty(output))
+            while (true)
             {
-                project.Diagnostics.Add(output);
+                var line = await dotnetPackProcess.StandardOutput.ReadLineAsync().WaitAsync(cancellationToken);
+                if (line is null)
+                {
+                    break;
+                }
+
+                project.Diagnostics.Add(line);
             }
+
+            await dotnetPackProcess.WaitForExitAsync(cancellationToken);
 
             return dotnetPackProcess.ExitCode == 0;
         }
