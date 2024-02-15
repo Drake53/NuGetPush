@@ -12,8 +12,10 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
+using NuGet.Common;
 using NuGet.Configuration;
 using NuGet.Protocol.Core.Types;
+using NuGet.Versioning;
 
 using NuGetPush.Helpers;
 using NuGetPush.WinForms.Forms;
@@ -25,7 +27,6 @@ namespace NuGetPush.WinForms.Helpers
         public static async Task<IRemoteConnectionManager> TryCreateAsync(PackageSource packageSource, CancellationToken cancellationToken)
         {
             var providers = Repository.Provider.GetCoreV3();
-            var sourceRepository = new SourceRepository(packageSource, providers);
 
             while (true)
             {
@@ -43,7 +44,10 @@ namespace NuGetPush.WinForms.Helpers
 
                     return new RemoteConnectionManager(packageSource, null);
 #else
+                    var sourceRepository = new SourceRepository(packageSource, providers);
                     var findPackageByIdResource = await sourceRepository.GetResourceAsync<FindPackageByIdResource>().WaitAsync(cancellationToken);
+
+                    await TryConnectToRemote(findPackageByIdResource, cancellationToken);
 
                     return new RemoteConnectionManager(packageSource, findPackageByIdResource);
 #endif
@@ -60,6 +64,15 @@ namespace NuGetPush.WinForms.Helpers
                     return new DisconnectedRemoteConnectionManager(packageSource, unauthorized: false);
                 }
             }
+        }
+
+        /// <exception cref="FatalProtocolException">Thrown when unable to connect to the remote package source, either due to not being authorized or due to some connection issue.</exception>
+        private static async Task TryConnectToRemote(FindPackageByIdResource findPackageByIdResource, CancellationToken cancellationToken)
+        {
+            using var sourceCacheContext = new SourceCacheContext();
+            sourceCacheContext.NoCache = true;
+
+            await findPackageByIdResource.DoesPackageExistAsync("Newtonsoft.Json", new NuGetVersion(13, 0, 3), sourceCacheContext, NullLogger.Instance, cancellationToken);
         }
 
         private static bool IsUnauthorizedException(FatalProtocolException fatalProtocolException)
