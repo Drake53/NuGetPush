@@ -26,7 +26,7 @@ namespace NuGetPush.WinForms.Extensions
                     return false;
                 }
 
-                var uncommittedFilePaths = uncommittedChanges.Where(path => path.StartsWith(project.RelativeProjectPath, StringComparison.OrdinalIgnoreCase));
+                var uncommittedFilePaths = uncommittedChanges.Where(path => path.StartsWith(project.ProjectDirectory, StringComparison.OrdinalIgnoreCase));
 
                 return !uncommittedFilePaths.Any();
             }

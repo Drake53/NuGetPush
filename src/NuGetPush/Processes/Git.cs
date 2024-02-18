@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -69,7 +70,7 @@ namespace NuGetPush.Processes
                     break;
                 }
 
-                result.Add(line[3..]);
+                result.Add(Utils.NormalizePath(Path.Combine(repositoryRoot, line[3..])));
             }
 
             await gitStatusProcess.WaitForExitAsync(cancellationToken);

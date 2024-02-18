@@ -26,12 +26,11 @@ namespace NuGetPush.Models
 {
     public class ClassLibrary
     {
-        public ClassLibrary(string name, string projectPath, string? repositoryRoot, Project project, PackageSource localPackageSource, PackageSource? remotePackageSource)
+        public ClassLibrary(string name, string projectPath, Project project, PackageSource localPackageSource, PackageSource? remotePackageSource)
         {
             Name = name;
             ProjectPath = projectPath;
-            ProjectDirectory = new FileInfo(projectPath).DirectoryName;
-            RelativeProjectPath = Utils.MakeRelativePath(projectPath, repositoryRoot);
+            ProjectDirectory = Utils.NormalizePath(Path.GetDirectoryName(projectPath));
             Project = project;
 
             PackageName = project.GetPropertyValue("PackageId");
@@ -64,8 +63,6 @@ namespace NuGetPush.Models
         public string ProjectPath { get; }
 
         public string ProjectDirectory { get; }
-
-        public string? RelativeProjectPath { get; }
 
         public Project Project { get; }
 

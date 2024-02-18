@@ -547,8 +547,8 @@ namespace NuGetPush.WinForms
 
                     packageSources ??= new List<SolutionPackageSources>();
 
-                    var solutionFilePath = Path.GetFullPath(solutionFileInfo.FullName).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-                    var solutionPackageSources = packageSources.FirstOrDefault(s => string.Equals(Path.GetFullPath(s.SolutionPath).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar), solutionFilePath, StringComparison.OrdinalIgnoreCase));
+                    var solutionFilePath = Utils.NormalizePath(solutionFileInfo.FullName);
+                    var solutionPackageSources = packageSources.FirstOrDefault(s => string.Equals(Utils.NormalizePath(s.SolutionPath), solutionFilePath, StringComparison.OrdinalIgnoreCase));
 
                     if (solutionPackageSources is not null)
                     {

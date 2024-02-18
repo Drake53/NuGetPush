@@ -39,6 +39,11 @@ namespace NuGetPush
             return fileInfo.DirectoryName[prefixLength..];
         }
 
+        public static string NormalizePath(string path)
+        {
+            return Path.GetFullPath(path).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        }
+
         public static async Task<PackProjectsResult> PackProjectsAsync(IEnumerable<ClassLibrary> projects, CancellationToken cancellationToken)
         {
             var succeeded = new List<ClassLibrary>();
