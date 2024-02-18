@@ -8,7 +8,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -31,11 +31,13 @@ namespace NuGetPush.Processes
             };
 
             using var gitStatusProcess = Process.Start(processStartInfo);
+
+            var result = await gitStatusProcess.StandardOutput.ReadLineAsync().WaitAsync(cancellationToken);
+
+            await gitStatusProcess.StandardOutput.ReadToEndAsync().WaitAsync(cancellationToken);
             await gitStatusProcess.WaitForExitAsync(cancellationToken);
 
-            var output = await gitStatusProcess.StandardOutput.ReadToEndAsync();
-
-            return output.TrimEnd('\n');
+            return result;
         }
 
         // https://git-scm.com/docs/git-status
@@ -52,11 +54,23 @@ namespace NuGetPush.Processes
             };
 
             using var gitStatusProcess = Process.Start(processStartInfo);
+
+            var result = new HashSet<string>();
+
+            while (true)
+            {
+                var line = await gitStatusProcess.StandardOutput.ReadLineAsync().WaitAsync(cancellationToken);
+                if (line is null)
+                {
+                    break;
+                }
+
+                result.Add(line[3..]);
+            }
+
             await gitStatusProcess.WaitForExitAsync(cancellationToken);
 
-            var output = await gitStatusProcess.StandardOutput.ReadToEndAsync();
-
-            return output.Split("\n", StringSplitOptions.RemoveEmptyEntries).Select(line => line[3..]).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            return result;
         }
     }
 }

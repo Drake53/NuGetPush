@@ -48,14 +48,13 @@ namespace NuGetPush.Processes
             };
 
             using var dotnetListSdksProcess = Process.Start(processStartInfo);
-            await dotnetListSdksProcess.WaitForExitAsync(cancellationToken);
 
             var sdks = new List<DotNetSdk>();
             var prefix = $"{Environment.Version.ToString(2)}.";
 
             while (true)
             {
-                var line = await dotnetListSdksProcess.StandardOutput.ReadLineAsync();
+                var line = await dotnetListSdksProcess.StandardOutput.ReadLineAsync().WaitAsync(cancellationToken);
                 if (line is null)
                 {
                     break;
@@ -66,6 +65,8 @@ namespace NuGetPush.Processes
                     sdks.Add(DotNetSdk.Parse(line));
                 }
             }
+
+            await dotnetListSdksProcess.WaitForExitAsync(cancellationToken);
 
             if (sdks.Count == 0)
             {
