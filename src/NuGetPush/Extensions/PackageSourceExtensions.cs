@@ -87,7 +87,8 @@ namespace NuGetPush.Extensions
 
         public static bool MoveLocalPackage(
             this PackageSource packageSource,
-            ClassLibrary classLibrary)
+            ClassLibrary classLibrary,
+            bool force)
         {
             if (!packageSource.IsLocal)
             {
@@ -127,10 +128,10 @@ namespace NuGetPush.Extensions
                 Directory.CreateDirectory(targetFolder);
             }
 
-            File.Copy(packageFilePath, Path.Combine(targetFolder, packageFileName), overwrite: false);
+            File.Copy(packageFilePath, Path.Combine(targetFolder, packageFileName), overwrite: force);
             if (expectSymbols)
             {
-                File.Copy(symbolsFilePath, Path.Combine(targetFolder, symbolsFileName), overwrite: false);
+                File.Copy(symbolsFilePath, Path.Combine(targetFolder, symbolsFileName), overwrite: force);
             }
 
             return true;

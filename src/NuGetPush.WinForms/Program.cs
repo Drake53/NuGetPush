@@ -330,7 +330,7 @@ namespace NuGetPush.WinForms
 
                 foreach (var project in projectBuildsSucceeded)
                 {
-                    var moveSucceeded = project.LocalPackageSource.MoveLocalPackage(project);
+                    var moveSucceeded = project.LocalPackageSource.MoveLocalPackage(project, force);
                     if (moveSucceeded)
                     {
                         if (project.KnownLatestLocalVersion is null || project.PackageVersion > project.KnownLatestLocalVersion)
