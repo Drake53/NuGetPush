@@ -131,7 +131,8 @@ namespace NuGetPush.Processes
 
             using var dotnetPushProcess = Process.Start(processStartInfo);
 
-            if (dotnetPushProcess.StandardOutput.TryReadDeviceLogin(out var deviceLoginLine))
+            var deviceLoginLine = await dotnetPushProcess.StandardOutput.TryReadDeviceLoginAsync(cancellationToken);
+            if (!string.IsNullOrEmpty(deviceLoginLine))
             {
                 await deviceLoginCallback.Invoke(deviceLoginLine);
             }

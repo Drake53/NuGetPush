@@ -5,9 +5,10 @@
 // </copyright>
 // ------------------------------------------------------------------------------
 
-using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Text.RegularExpressions;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace NuGetPush.Extensions
 {
@@ -15,21 +16,19 @@ namespace NuGetPush.Extensions
     {
         private static readonly Regex _deviceLoginRegex = new Regex("To sign in, use a web browser to open the page https://microsoft.com/devicelogin and enter the code ([A-Z\\d]+) to authenticate.", RegexOptions.Compiled);
 
-        public static bool TryReadDeviceLogin(this StreamReader streamReader, [NotNullWhen(true)] out string? deviceLoginLine)
+        public static async Task<string?> TryReadDeviceLoginAsync(this StreamReader streamReader, CancellationToken cancellationToken)
         {
             while (true)
             {
-                var line = streamReader.ReadLine();
+                var line = await streamReader.ReadLineAsync().WaitAsync(cancellationToken);
                 if (line is null)
                 {
-                    deviceLoginLine = null;
-                    return false;
+                    return null;
                 }
 
                 if (_deviceLoginRegex.IsMatch(line))
                 {
-                    deviceLoginLine = line.Trim();
-                    return true;
+                    return line.Trim();
                 }
             }
         }
