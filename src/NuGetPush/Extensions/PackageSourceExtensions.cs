@@ -148,6 +148,12 @@ namespace NuGetPush.Extensions
             }
 
 #if MOCK_REMOTE
+            var apiKey = await remoteConnectionManager.TryGetApiKeyAsync();
+            if (string.IsNullOrEmpty(apiKey))
+            {
+                return false;
+            }
+
             await Task.Delay(2000, cancellationToken);
 
             return true;
