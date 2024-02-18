@@ -6,6 +6,7 @@
 // ------------------------------------------------------------------------------
 
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -19,8 +20,14 @@ namespace NuGetPush
 {
     public static class Utils
     {
-        public static string MakeRelativePath(string absolutePath, string repositoryRoot)
+        [return: NotNullIfNotNull("repositoryRoot")]
+        public static string? MakeRelativePath(string absolutePath, string? repositoryRoot)
         {
+            if (repositoryRoot is null)
+            {
+                return null;
+            }
+
             var fileInfo = new FileInfo(absolutePath);
             var prefixLength = repositoryRoot.Length;
 

@@ -8,7 +8,6 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -18,7 +17,7 @@ namespace NuGetPush.Processes
     {
         private const string ProcessName = "git";
 
-        public static async Task<string> GetRepositoryRootAsync(string solutionDirectory, CancellationToken cancellationToken)
+        public static async Task<string?> GetRepositoryRootAsync(string solutionDirectory, CancellationToken cancellationToken)
         {
             var processStartInfo = new ProcessStartInfo
             {
@@ -37,12 +36,19 @@ namespace NuGetPush.Processes
             await gitStatusProcess.StandardOutput.ReadToEndAsync().WaitAsync(cancellationToken);
             await gitStatusProcess.WaitForExitAsync(cancellationToken);
 
-            return result;
+            return gitStatusProcess.ExitCode == 0 ? result : null;
         }
 
         // https://git-scm.com/docs/git-status
-        public static async Task<HashSet<string>> CheckUncommittedChangesAsync(string repositoryRoot, CancellationToken cancellationToken)
+        public static async Task<HashSet<string>> CheckUncommittedChangesAsync(string? repositoryRoot, CancellationToken cancellationToken)
         {
+            var result = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            if (repositoryRoot is null)
+            {
+                return result;
+            }
+
             var processStartInfo = new ProcessStartInfo
             {
                 CreateNoWindow = true,
@@ -54,8 +60,6 @@ namespace NuGetPush.Processes
             };
 
             using var gitStatusProcess = Process.Start(processStartInfo);
-
-            var result = new HashSet<string>();
 
             while (true)
             {

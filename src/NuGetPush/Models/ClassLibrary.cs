@@ -26,7 +26,7 @@ namespace NuGetPush.Models
 {
     public class ClassLibrary
     {
-        public ClassLibrary(string name, string projectPath, string repositoryRoot, Project project, PackageSource localPackageSource, PackageSource? remotePackageSource)
+        public ClassLibrary(string name, string projectPath, string? repositoryRoot, Project project, PackageSource localPackageSource, PackageSource? remotePackageSource)
         {
             Name = name;
             ProjectPath = projectPath;
@@ -65,7 +65,7 @@ namespace NuGetPush.Models
 
         public string ProjectDirectory { get; }
 
-        public string RelativeProjectPath { get; }
+        public string? RelativeProjectPath { get; }
 
         public Project Project { get; }
 

@@ -9,8 +9,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 
 using Microsoft.Build.Construction;
 using Microsoft.Build.Definition;
@@ -21,7 +19,6 @@ using NuGet.Configuration;
 using NuGet.Versioning;
 
 using NuGetPush.Helpers;
-using NuGetPush.Processes;
 
 namespace NuGetPush.Models
 {
@@ -29,7 +26,7 @@ namespace NuGetPush.Models
     {
         private readonly string _solutionFileName;
 
-        public Solution(string repositoryRoot, string fileName)
+        public Solution(string? repositoryRoot, string fileName)
         {
             RepositoryRoot = repositoryRoot;
 
@@ -43,7 +40,7 @@ namespace NuGetPush.Models
 
         public string Name { get; }
 
-        public string RepositoryRoot { get; }
+        public string? RepositoryRoot { get; }
 
         public List<PackageSource> PackageSources { get; }
 
