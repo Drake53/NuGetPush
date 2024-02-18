@@ -41,11 +41,11 @@ namespace NuGetPush.Models
             PackageSources = PackageSourceFactory.GetPackageSources(solutionFileInfo.DirectoryName);
         }
 
-        public string Name { get; init; }
+        public string Name { get; }
 
-        public string RepositoryRoot { get; init; }
+        public string RepositoryRoot { get; }
 
-        public List<PackageSource> PackageSources { get; init; }
+        public List<PackageSource> PackageSources { get; }
 
         public PackageSource? SelectedLocalPackageSource { get; set; }
 

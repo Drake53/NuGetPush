@@ -59,29 +59,29 @@ namespace NuGetPush.Models
                 : RemotePackageVersionRequestState.Loading;
         }
 
-        public string Name { get; init; }
+        public string Name { get; }
 
-        public string ProjectPath { get; init; }
+        public string ProjectPath { get; }
 
-        public string ProjectDirectory { get; init; }
+        public string ProjectDirectory { get; }
 
-        public string RelativeProjectPath { get; init; }
+        public string RelativeProjectPath { get; }
 
-        public Project Project { get; init; }
+        public Project Project { get; }
 
-        public string PackageName { get; init; }
+        public string PackageName { get; }
 
-        public string PackageDescription { get; init; }
+        public string PackageDescription { get; }
 
         public List<string> Diagnostics { get; } = new();
 
-        public string PackageOutputPath { get; init; }
+        public string PackageOutputPath { get; }
 
         public PackageSource LocalPackageSource { get; }
 
         public PackageSource? RemotePackageSource { get; }
 
-        public NuGetVersion? PackageVersion { get; init; }
+        public NuGetVersion? PackageVersion { get; }
 
         public NuGetVersion? KnownLatestVersion { get; set; }
 
@@ -95,9 +95,9 @@ namespace NuGetPush.Models
 
         public HashSet<ClassLibrary> Dependees { get; private set; }
 
-        public HashSet<TestProject> TestProjects { get; init; } = new();
+        public HashSet<TestProject> TestProjects { get; } = new();
 
-        public HashSet<TestProject> MisconfiguredTestProjects { get; init; } = new();
+        public HashSet<TestProject> MisconfiguredTestProjects { get; } = new();
 
         public void FindLatestLocalVersion()
         {

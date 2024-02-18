@@ -19,13 +19,13 @@ namespace NuGetPush.Models
             Project = project;
         }
 
-        public string Name { get; init; }
+        public string Name { get; }
 
-        public string ProjectPath { get; init; }
+        public string ProjectPath { get; }
 
-        public string RelativeProjectPath { get; init; }
+        public string RelativeProjectPath { get; }
 
-        public Project Project { get; init; }
+        public Project Project { get; }
 
         public override string ToString() => Name;
     }
