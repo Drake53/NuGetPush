@@ -6,6 +6,7 @@
 // ------------------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -15,6 +16,8 @@ using System.Threading.Tasks;
 
 using NuGet.Common;
 using NuGet.Configuration;
+using NuGet.Packaging;
+using NuGet.Packaging.Core;
 using NuGet.Protocol.Core.Types;
 using NuGet.Versioning;
 
@@ -28,7 +31,8 @@ namespace NuGetPush.Extensions
     {
         public static NuGetVersion? GetLatestLocalNuGetVersion(
             this PackageSource packageSource,
-            ClassLibrary classLibrary)
+            ClassLibrary classLibrary,
+            out HashSet<PackageDependency>? dependencies)
         {
             if (!packageSource.IsLocal)
             {
@@ -38,11 +42,17 @@ namespace NuGetPush.Extensions
             var packageDirectory = Path.Combine(packageSource.Source, classLibrary.PackageName.ToLowerInvariant());
             if (Directory.Exists(packageDirectory))
             {
-                return Directory.EnumerateFiles(packageDirectory, "*.nupkg", SearchOption.TopDirectoryOnly)
+                var result = Directory.EnumerateFiles(packageDirectory, "*.nupkg", SearchOption.TopDirectoryOnly)
                     .Select(filePath => GetNuGetVersionFromFile(classLibrary, filePath))
                     .Max();
+
+                var latestVersionNupkgFilePath = Path.Combine(packageDirectory, $"{classLibrary.PackageName}.{result.OriginalVersion}.nupkg");
+
+                dependencies = GetDependenciesFromNupkg(classLibrary, latestVersionNupkgFilePath);
+                return result;
             }
 
+            dependencies = null;
             return null;
         }
 
@@ -61,7 +71,7 @@ namespace NuGetPush.Extensions
             try
             {
 #if MOCK_REMOTE
-                return new LatestPackageVersionResult(enableCache ? null : classLibrary.KnownLatestLocalVersion);
+                return new LatestPackageVersionResult(enableCache ? null : classLibrary.KnownLatestLocalVersion, null);
 #else
                 using var sourceCacheContext = new SourceCacheContext();
 
@@ -74,7 +84,10 @@ namespace NuGetPush.Extensions
                 var packageVersions = await remoteConnectionManager.FindPackageByIdResource.GetAllVersionsAsync(classLibrary.PackageName, sourceCacheContext, NullLogger.Instance, cancellationToken);
                 var latestVersion = packageVersions.Max();
 
-                return new LatestPackageVersionResult(latestVersion);
+                var dependencyInfo = await remoteConnectionManager.FindPackageByIdResource.GetDependencyInfoAsync(classLibrary.PackageName, latestVersion, sourceCacheContext, NullLogger.Instance, cancellationToken);
+                var dependencies = dependencyInfo.DependencyGroups.SelectMany(group => group.Packages).ToHashSet();
+
+                return new LatestPackageVersionResult(latestVersion, dependencies);
 #endif
             }
             catch (Exception exception) when (exception is not TaskCanceledException)
@@ -199,6 +212,16 @@ namespace NuGetPush.Extensions
         private static NuGetVersion GetNuGetVersionFromFile(ClassLibrary classLibrary, string filePath)
         {
             return NuGetVersion.Parse(new FileInfo(filePath).Name[(classLibrary.PackageName.Length + 1)..^6]);
+        }
+
+        private static HashSet<PackageDependency> GetDependenciesFromNupkg(ClassLibrary classLibrary, string filePath)
+        {
+            using var zip = Ionic.Zip.ZipFile.Read(filePath);
+            var nuspec = zip[$"{classLibrary.PackageName}.nuspec"];
+            using var zipEntryReader = nuspec.OpenReader();
+            var reader = new NuspecReader(zipEntryReader);
+
+            return reader.GetDependencyGroups().SelectMany(group => group.Packages).ToHashSet();
         }
 
         private static bool IsUnauthorizedException(FatalProtocolException fatalProtocolException)

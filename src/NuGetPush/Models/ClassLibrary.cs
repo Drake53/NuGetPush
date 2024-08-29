@@ -16,6 +16,7 @@ using System.Threading.Tasks;
 using Microsoft.Build.Evaluation;
 
 using NuGet.Configuration;
+using NuGet.Packaging.Core;
 using NuGet.Versioning;
 
 using NuGetPush.Enums;
@@ -90,6 +91,8 @@ namespace NuGetPush.Models
 
         public RemotePackageVersionRequestState KnownLatestRemoteVersionState { get; set; }
 
+        public HashSet<PackageDependency>? KnownLatestVersionDependencies { get; set; }
+
         public HashSet<ClassLibrary>? Dependencies { get; private set; }
 
         public HashSet<ClassLibrary> Dependees { get; private set; }
@@ -107,11 +110,12 @@ namespace NuGetPush.Models
                 return;
             }
 
-            KnownLatestLocalVersion = LocalPackageSource.GetLatestLocalNuGetVersion(this);
+            KnownLatestLocalVersion = LocalPackageSource.GetLatestLocalNuGetVersion(this, out var dependencies);
 
             if (KnownLatestLocalVersion is not null && (KnownLatestVersion is null || KnownLatestLocalVersion > KnownLatestVersion))
             {
                 KnownLatestVersion = KnownLatestLocalVersion;
+                KnownLatestVersionDependencies = dependencies;
             }
         }
 
@@ -130,6 +134,7 @@ namespace NuGetPush.Models
             if (KnownLatestRemoteVersion is not null && (KnownLatestVersion is null || KnownLatestRemoteVersion > KnownLatestVersion))
             {
                 KnownLatestVersion = KnownLatestRemoteVersion;
+                KnownLatestVersionDependencies = latestVersionResult.Dependencies;
             }
         }
 

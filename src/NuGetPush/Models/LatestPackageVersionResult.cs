@@ -5,6 +5,9 @@
 // </copyright>
 // ------------------------------------------------------------------------------
 
+using System.Collections.Generic;
+
+using NuGet.Packaging.Core;
 using NuGet.Versioning;
 
 using NuGetPush.Enums;
@@ -16,16 +19,18 @@ namespace NuGetPush.Models
         private static readonly LatestPackageVersionResult _unauthorizedResult = new(RemotePackageVersionRequestState.Unauthorized);
         private static readonly LatestPackageVersionResult _errorResult = new(RemotePackageVersionRequestState.Error);
 
-        public LatestPackageVersionResult(NuGetVersion? version)
+        public LatestPackageVersionResult(NuGetVersion? version, HashSet<PackageDependency>? dependencies)
         {
             Version = version;
             State = RemotePackageVersionRequestState.Loaded;
+            Dependencies = dependencies;
         }
 
         private LatestPackageVersionResult(RemotePackageVersionRequestState state)
         {
             Version = null;
             State = state;
+            Dependencies = null;
         }
 
         public static LatestPackageVersionResult UnauthorizedResult => _unauthorizedResult;
@@ -35,5 +40,7 @@ namespace NuGetPush.Models
         public NuGetVersion? Version { get; }
 
         public RemotePackageVersionRequestState State { get; }
+
+        public HashSet<PackageDependency>? Dependencies { get; }
     }
 }

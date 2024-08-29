@@ -5,6 +5,7 @@
 	</PropertyGroup>
 
 	<ItemGroup>
+		<PackageReference Include="DotNetZip" Version="1.16.0" />
 		<PackageReference Include="NuGet.Protocol" Version="6.8.0" />
 	</ItemGroup>
 
