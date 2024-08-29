@@ -6,8 +6,10 @@
 // ------------------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
+using System.Linq;
 
 using NuGet.Versioning;
 
@@ -16,7 +18,7 @@ using NuGetPush.Models;
 
 namespace NuGetPush.Extensions
 {
-    internal static class ClassLibraryExtensions
+    public static class ClassLibraryExtensions
     {
         /// <summary>
         /// Do not allow the default 1.0.0 version, unless the version has explicitly been set to this value in the project.
@@ -60,6 +62,45 @@ namespace NuGetPush.Extensions
 
             nuGetVersion = null;
             return false;
+        }
+
+        /// <summary>
+        /// Check if this project must be build before dependees can be built.
+        /// </summary>
+        /// <param name="classLibrary">The project to check.</param>
+        /// <returns><see langword="true"/> if the <paramref name="classLibrary"/>'s current <see cref="ClassLibrary.PackageVersion"/> already exists in one of the package sources.</returns>
+        public static bool IsUpToDateAsDependency(this ClassLibrary classLibrary)
+        {
+            return classLibrary.PackageVersion == classLibrary.KnownLatestLocalVersion
+                || classLibrary.PackageVersion == classLibrary.KnownLatestRemoteVersion;
+        }
+
+        /// <summary>
+        /// Get all projects, including dependencies, which must be built in order to build the given projects.
+        /// </summary>
+        public static IEnumerable<ClassLibrary> GetProjectsToBuild(this IEnumerable<ClassLibrary> projectsToBuild)
+        {
+            var result = projectsToBuild.ToHashSet();
+            var queue = new Queue<ClassLibrary>(result);
+
+            while (queue.TryDequeue(out var project))
+            {
+                if (project.Dependencies is null)
+                {
+                    continue;
+                }
+
+                foreach (var dependency in project.Dependencies)
+                {
+                    if (!result.Contains(dependency) && !dependency.IsUpToDateAsDependency())
+                    {
+                        result.Add(dependency);
+                        queue.Enqueue(dependency);
+                    }
+                }
+            }
+
+            return result;
         }
     }
 }

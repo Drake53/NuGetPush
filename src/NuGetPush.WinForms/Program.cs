@@ -226,7 +226,7 @@ namespace NuGetPush.WinForms
                 var selectedProjects = GetSelectedProjects();
                 var handledProjects = await PackProjectsAsync(selectedProjects, true, cancellationToken);
 
-                await PushProjectsAsync(handledProjects, selectedProjects.Count == 1, cancellationToken);
+                await PushProjectsAsync(handledProjects.Where(b => !b.Failed).Select(b => b.Project), selectedProjects.Count == 1, cancellationToken);
             }
             catch (TaskCanceledException)
             {
@@ -244,7 +244,7 @@ namespace NuGetPush.WinForms
             {
                 var handledProjects = await PackProjectsAsync(_solution.Projects, false, cancellationToken);
 
-                await PushProjectsAsync(handledProjects, false, cancellationToken);
+                await PushProjectsAsync(handledProjects.Where(b => !b.Failed).Select(b => b.Project), false, cancellationToken);
             }
             catch (TaskCanceledException)
             {
@@ -275,25 +275,28 @@ namespace NuGetPush.WinForms
             return result;
         }
 
-        private static async Task<HashSet<ClassLibrary>> PackProjectsAsync(IEnumerable<ClassLibrary> projectsToPack, bool force, CancellationToken cancellationToken)
+        private static async Task<List<BuildResult>> PackProjectsAsync(IEnumerable<ClassLibrary> projectsToPack, bool force, CancellationToken cancellationToken)
         {
-            var result = new HashSet<ClassLibrary>();
+            var result = new List<BuildResult>();
 
             var uncommittedChanges = await Git.CheckUncommittedChangesAsync(_solution.RepositoryRoot, cancellationToken);
 
-            foreach (var project in projectsToPack)
+            var requestedProjectsToPack = projectsToPack.ToHashSet();
+
+            var idleProjects = new HashSet<ClassLibrary>();
+
+            foreach (var project in requestedProjectsToPack.GetProjectsToBuild())
             {
                 project.CheckDirty(uncommittedChanges);
 
-                if (project.CanPack(force))
+                if (project.CanPack(requestedProjectsToPack.Contains(project) ? force : false))
                 {
                     project.Diagnostics.Clear();
 
-                    result.Add(project);
+                    idleProjects.Add(project);
                 }
             }
 
-            var idleProjects = new HashSet<ClassLibrary>(result);
             foreach (ListViewItem item in _form.ProjectListView.Items)
             {
                 var tag = item.GetTag();
@@ -308,10 +311,36 @@ namespace NuGetPush.WinForms
                 var packableProjects = new HashSet<ClassLibrary>();
                 foreach (var project in idleProjects)
                 {
-                    if (project.Dependencies.All(dependency => !idleProjects.Contains(dependency) || dependency.PackageVersion == dependency.KnownLatestLocalVersion || dependency.PackageVersion == dependency.KnownLatestRemoteVersion))
+                    if (project.Dependencies.All(dependency => dependency.IsUpToDateAsDependency()))
                     {
                         packableProjects.Add(project);
                     }
+                }
+
+                if (packableProjects.Count == 0)
+                {
+                    foreach (var project in idleProjects)
+                    {
+                        result.Add(new BuildResult
+                        {
+                            Project = project,
+                            Failed = true,
+                            MissingDependencies = project.Dependencies?.Where(dependency => !dependency.IsUpToDateAsDependency()).ToList(),
+                        });
+                    }
+
+                    foreach (ListViewItem item in _form.ProjectListView.Items)
+                    {
+                        var tag = item.GetTag();
+                        if (idleProjects.Contains(tag.ClassLibrary))
+                        {
+                            item.Update(ProjectStatus.DependencyError);
+                        }
+                    }
+
+                    _form.ProjectListView.Sort();
+
+                    break;
                 }
 
                 idleProjects.ExceptWith(packableProjects);
@@ -332,7 +361,7 @@ namespace NuGetPush.WinForms
 
                 foreach (var project in projectBuildsSucceeded)
                 {
-                    var moveSucceeded = project.LocalPackageSource.MoveLocalPackage(project, force);
+                    var moveSucceeded = project.LocalPackageSource.MoveLocalPackage(project, requestedProjectsToPack.Contains(project) ? force : false);
                     if (moveSucceeded)
                     {
                         if (project.KnownLatestLocalVersion is null || project.PackageVersion > project.KnownLatestLocalVersion)
@@ -340,23 +369,13 @@ namespace NuGetPush.WinForms
                             project.KnownLatestLocalVersion = project.PackageVersion;
                         }
                     }
+
+                    result.Add(new BuildResult { Project = project });
                 }
 
-                var projectBuildsDependenciesError = new HashSet<ClassLibrary>();
                 foreach (var project in projectBuildsFailed)
                 {
-                    void AddDependeesToDependencyErrorProjectsList(ClassLibrary classLibrary)
-                    {
-                        foreach (var dependee in classLibrary.Dependees)
-                        {
-                            idleProjects.Remove(dependee);
-                            projectBuildsDependenciesError.Add(dependee);
-
-                            AddDependeesToDependencyErrorProjectsList(dependee);
-                        }
-                    }
-
-                    AddDependeesToDependencyErrorProjectsList(project);
+                    result.Add(new BuildResult { Project = project, Failed = true });
                 }
 
                 foreach (ListViewItem item in _form.ProjectListView.Items)
@@ -365,10 +384,6 @@ namespace NuGetPush.WinForms
                     if (packableProjects.Contains(tag.ClassLibrary))
                     {
                         item.Update(projectBuildsFailed.Contains(tag.ClassLibrary) ? ProjectStatus.PackError : ProjectStatus.Packed);
-                    }
-                    else if (projectBuildsDependenciesError.Contains(tag.ClassLibrary))
-                    {
-                        item.Update(ProjectStatus.DependencyError);
                     }
                 }
 
