@@ -26,6 +26,8 @@ namespace NuGetPush.Models
     {
         private readonly string _solutionFileName;
 
+        private bool _projectsLoaded;
+
         public Solution(string? repositoryRoot, string fileName)
         {
             RepositoryRoot = repositoryRoot;
@@ -36,6 +38,9 @@ namespace NuGetPush.Models
             _solutionFileName = solutionFileInfo.FullName;
 
             PackageSources = PackageSourceFactory.GetPackageSources(solutionFileInfo.DirectoryName);
+            Projects = new();
+            TestProjects = new();
+            InvalidProjects = new();
         }
 
         public string Name { get; }
@@ -48,29 +53,25 @@ namespace NuGetPush.Models
 
         public PackageSource? SelectedRemotePackageSource { get; set; }
 
-        public List<ClassLibrary> Projects { get; private set; }
+        public List<ClassLibrary> Projects { get; }
 
-        public List<TestProject> TestProjects { get; private set; }
+        public List<TestProject> TestProjects { get; }
 
-        public List<string> InvalidProjects { get; private set; }
+        public List<string> InvalidProjects { get; }
 
         public override string ToString() => Name;
 
         public void ParseSolutionProjects(List<string>? solutionFilterProjects, bool checkDependencies)
         {
-            if (Projects is not null || TestProjects is not null)
+            if (_projectsLoaded)
             {
-                throw new InvalidOperationException();
+                throw new InvalidOperationException("Projects have already been loaded.");
             }
 
             if (SelectedLocalPackageSource is null)
             {
-                throw new InvalidOperationException();
+                throw new InvalidOperationException("Local package source is required to load projects.");
             }
-
-            Projects = new();
-            TestProjects = new();
-            InvalidProjects = new();
 
             var solutionFile = SolutionFile.Parse(_solutionFileName);
 
@@ -203,6 +204,8 @@ namespace NuGetPush.Models
                     }
                 }
             }
+
+            _projectsLoaded = true;
         }
     }
 }
