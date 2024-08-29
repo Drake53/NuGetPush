@@ -55,22 +55,23 @@ namespace NuGetPush.WinForms.Controls
             SmallImageList = new ImageList();
             var statusColors = new Dictionary<ProjectStatus, Color>
             {
+                { ProjectStatus.DependencyError, Color.Orange },
+                { ProjectStatus.Dirty, Color.Brown },
+                { ProjectStatus.Idle, Color.Violet },
+                { ProjectStatus.Misconfigured, Color.DimGray },
+                { ProjectStatus.NotReady, Color.DarkSlateGray },
+                { ProjectStatus.Outdated, Color.SlateGray },
                 { ProjectStatus.Packed, Color.Yellow },
                 { ProjectStatus.PackError, Color.Red },
                 { ProjectStatus.ParseError, Color.Maroon },
                 { ProjectStatus.Pending, Color.LightSkyBlue },
                 { ProjectStatus.Pushed, Color.LimeGreen },
                 { ProjectStatus.PushError, Color.IndianRed },
+                { ProjectStatus.ReadyToPack, Color.SkyBlue },
+                { ProjectStatus.ReadyToPush, Color.LightBlue },
                 { ProjectStatus.TestFailed, Color.DarkViolet },
                 { ProjectStatus.UpToDate, Color.ForestGreen },
                 { ProjectStatus.Working, Color.DarkViolet },
-                { ProjectStatus.NotReady, Color.DarkSlateGray },
-                { ProjectStatus.Idle, Color.Violet },
-                { ProjectStatus.DependencyError, Color.Orange },
-                { ProjectStatus.ReadyToPush, Color.LightBlue },
-                { ProjectStatus.Outdated, Color.SlateGray },
-                { ProjectStatus.ReadyToPack, Color.SkyBlue },
-                { ProjectStatus.Misconfigured, Color.DimGray },
             };
 
             foreach (var status in Enum.GetValues(typeof(ProjectStatus)))
@@ -168,7 +169,9 @@ namespace NuGetPush.WinForms.Controls
                 foreach (var tag in tags)
                 {
                     var project = tag.ClassLibrary;
-                    var canPack = project.CanPack(uncommittedChanges, true);
+                    project.CheckDirty(uncommittedChanges);
+
+                    var canPack = project.CanPack(force: true);
                     var canPush = project.CanPush(tags.Count == 1);
 
                     _packContextButton.Enabled |= canPack;

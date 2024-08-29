@@ -45,6 +45,11 @@ namespace NuGetPush.WinForms.Enums
         Pending,
 
         /// <summary>
+        /// The project has uncommitted changes.
+        /// </summary>
+        Dirty,
+
+        /// <summary>
         /// The project has been packed, but it has not been pushed yet.
         /// </summary>
         Packed,

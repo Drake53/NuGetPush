@@ -72,6 +72,8 @@ namespace NuGetPush.Models
 
         public List<string> Diagnostics { get; } = new();
 
+        public List<string> DirtyFiles { get; } = new();
+
         public string PackageOutputPath { get; }
 
         public PackageSource LocalPackageSource { get; }
@@ -95,6 +97,8 @@ namespace NuGetPush.Models
         public HashSet<TestProject> TestProjects { get; } = new();
 
         public HashSet<TestProject> MisconfiguredTestProjects { get; } = new();
+
+        public bool IsDirty { get; set; }
 
         public void FindLatestLocalVersion()
         {

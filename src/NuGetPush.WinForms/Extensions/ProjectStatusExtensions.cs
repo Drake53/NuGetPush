@@ -22,6 +22,7 @@ namespace NuGetPush.WinForms.Extensions
                 ProjectStatus.ReadyToPush => force,
                 ProjectStatus.ReadyToPack => true,
                 ProjectStatus.Pending => true,
+                ProjectStatus.Dirty => force,
                 ProjectStatus.Packed => force,
                 ProjectStatus.Pushed => force,
                 ProjectStatus.TestFailed => force,

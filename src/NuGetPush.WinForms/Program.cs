@@ -283,7 +283,9 @@ namespace NuGetPush.WinForms
 
             foreach (var project in projectsToPack)
             {
-                if (project.CanPack(uncommittedChanges, force))
+                project.CheckDirty(uncommittedChanges);
+
+                if (project.CanPack(force))
                 {
                     project.Diagnostics.Clear();
 
@@ -442,7 +444,7 @@ namespace NuGetPush.WinForms
         private static void UpdateDiagnosticsDisplay()
         {
             _form.DiagnosticsDisplay.Text = _form.ProjectListView.TryGetSelectedItemTag(out var tag)
-                ? string.Join(Environment.NewLine + Environment.NewLine, tag.ClassLibrary.Diagnostics.Append($"Description:{Environment.NewLine}{tag.ClassLibrary.PackageDescription}"))
+                ? string.Join(Environment.NewLine + Environment.NewLine, tag.ClassLibrary.DirtyFiles.Select(path => $"Uncommitted file: {path}").Concat(tag.ClassLibrary.Diagnostics).Append($"Description:{Environment.NewLine}{tag.ClassLibrary.PackageDescription}"))
                 : $"{_form.ProjectListView.SelectedItems.Count} projects selected.";
         }
 
@@ -609,6 +611,11 @@ namespace NuGetPush.WinForms
 
                     _solution.ParseSolutionProjects(solutionFilterProjects, true);
 
+                    foreach (var project in _solution.Projects)
+                    {
+                        project.CheckDirty(uncommittedChanges);
+                    }
+
                     _form.ProjectListView.LoadSolution(_solution);
 
                     UpdateWorkButtonsEnabled(uncommittedChanges);
@@ -640,9 +647,11 @@ namespace NuGetPush.WinForms
             foreach (ListViewItem item in _form.ProjectListView.Items)
             {
                 var project = item.GetTag().ClassLibrary;
+                project.CheckDirty(uncommittedChanges);
+
                 var canPush = project.CanPush(false);
 
-                if (project.CanPack(uncommittedChanges, false))
+                if (project.CanPack(force: false))
                 {
                     anyCanBePacked = true;
                     if (canPush)

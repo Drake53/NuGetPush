@@ -17,21 +17,9 @@ namespace NuGetPush.WinForms.Extensions
 {
     public static class ClassLibraryExtensions
     {
-        public static bool CanPack(this ClassLibrary project, HashSet<string> uncommittedChanges, bool force)
+        public static bool CanPack(this ClassLibrary project, bool force)
         {
-            if (project.RecalculateStatus().CanPack(force))
-            {
-                if (uncommittedChanges.Any(uncommittedChange => uncommittedChange.Contains("Directory.Build.props", StringComparison.OrdinalIgnoreCase)))
-                {
-                    return false;
-                }
-
-                var uncommittedFilePaths = uncommittedChanges.Where(path => path.StartsWith(project.ProjectDirectory, StringComparison.OrdinalIgnoreCase));
-
-                return !uncommittedFilePaths.Any();
-            }
-
-            return false;
+            return project.RecalculateStatus().CanPack(force);
         }
 
         public static bool CanPush(this ClassLibrary project, bool force)
@@ -72,21 +60,21 @@ namespace NuGetPush.WinForms.Extensions
             {
                 if (project.PackageVersion == project.KnownLatestLocalVersion)
                 {
-                    return ProjectStatus.UpToDate;
+                    return project.IsDirty ? ProjectStatus.Dirty : ProjectStatus.UpToDate;
                 }
 
-                return ProjectStatus.Pending;
+                return project.IsDirty ? ProjectStatus.Dirty : ProjectStatus.Pending;
             }
             else
             {
                 if (project.PackageVersion == project.KnownLatestLocalVersion && project.PackageVersion == project.KnownLatestRemoteVersion)
                 {
-                    return ProjectStatus.UpToDate;
+                    return project.IsDirty ? ProjectStatus.Dirty : ProjectStatus.UpToDate;
                 }
 
                 if (project.PackageVersion > project.KnownLatestLocalVersion && project.PackageVersion > project.KnownLatestRemoteVersion)
                 {
-                    return ProjectStatus.Pending;
+                    return project.IsDirty ? ProjectStatus.Dirty : ProjectStatus.Pending;
                 }
 
                 if (project.PackageVersion > project.KnownLatestRemoteVersion)
@@ -94,8 +82,19 @@ namespace NuGetPush.WinForms.Extensions
                     return ProjectStatus.ReadyToPush;
                 }
 
-                return ProjectStatus.ReadyToPack;
+                return project.IsDirty ? ProjectStatus.Dirty : ProjectStatus.ReadyToPack;
             }
+        }
+
+        public static void CheckDirty(this ClassLibrary project, HashSet<string> uncommittedChanges)
+        {
+            var dirtyFiles = uncommittedChanges
+                .Where(path => path.Contains("Directory.Build.props", StringComparison.OrdinalIgnoreCase)
+                            || path.StartsWith(project.ProjectDirectory, StringComparison.OrdinalIgnoreCase));
+
+            project.DirtyFiles.Clear();
+            project.DirtyFiles.AddRange(dirtyFiles);
+            project.IsDirty = project.DirtyFiles.Count > 0;
         }
 
         public static string GetRemotePackageString(this ClassLibrary project)
