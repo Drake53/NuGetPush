@@ -84,6 +84,13 @@ namespace NuGetPush.Extensions
                 var packageVersions = await remoteConnectionManager.FindPackageByIdResource.GetAllVersionsAsync(classLibrary.PackageName, sourceCacheContext, NullLogger.Instance, cancellationToken);
                 var latestVersion = packageVersions.Max();
 
+                if (latestVersion is null ||
+                    (classLibrary.KnownLatestVersion is not null &&
+                     latestVersion <= classLibrary.KnownLatestVersion))
+                {
+                    return new LatestPackageVersionResult(latestVersion, null);
+                }
+
                 var dependencyInfo = await remoteConnectionManager.FindPackageByIdResource.GetDependencyInfoAsync(classLibrary.PackageName, latestVersion, sourceCacheContext, NullLogger.Instance, cancellationToken);
                 var dependencies = dependencyInfo.DependencyGroups.SelectMany(group => group.Packages).ToHashSet();
 
