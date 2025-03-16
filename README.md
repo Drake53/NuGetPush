@@ -40,4 +40,8 @@ To prevent accidents, the push option will not work for projects with no (known)
 This tool uses MSBuild to parse the .sln and .csproj files, which requires you to have the .NET SDK installed.
 Starting with .NET 8.0, .sln and .slnx files are parsed with Microsoft.VisualStudio.SolutionPersistence.
 
+If you run into exceptions when parsing projects using MSBuild, make sure that:
+- The target framework version for NuGetPush and NuGetPush.WinForms matches the latest .NET SDK version you have installed;
+- You use the latest package versions for Microsoft.Build and Microsoft.Build.Utilities.Core that are supported for your .NET runtime version.
+
 If the remote package source is an azure artifacts feed, you must install the following NuGet plugin: https://github.com/microsoft/artifacts-credprovider
