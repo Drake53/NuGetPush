@@ -36,7 +36,7 @@ namespace NuGetPush.Extensions
         public static NuGetVersion? GetLatestLocalNuGetVersion(
             this PackageSource packageSource,
             ClassLibrary classLibrary,
-            out HashSet<PackageDependency>? dependencies)
+            out PackageMetadata? metadata)
         {
             if (!packageSource.IsLocal)
             {
@@ -52,11 +52,11 @@ namespace NuGetPush.Extensions
 
                 var latestVersionNupkgFilePath = Path.Combine(packageDirectory, $"{classLibrary.PackageName}.{result.OriginalVersion}.nupkg");
 
-                dependencies = GetDependenciesFromNupkg(classLibrary, latestVersionNupkgFilePath);
+                metadata = GetMetadataFromNupkg(classLibrary, latestVersionNupkgFilePath);
                 return result;
             }
 
-            dependencies = null;
+            metadata = null;
             return null;
         }
 
@@ -225,7 +225,7 @@ namespace NuGetPush.Extensions
             return NuGetVersion.Parse(new FileInfo(filePath).Name[(classLibrary.PackageName.Length + 1)..^6]);
         }
 
-        private static HashSet<PackageDependency> GetDependenciesFromNupkg(ClassLibrary classLibrary, string filePath)
+        private static PackageMetadata GetMetadataFromNupkg(ClassLibrary classLibrary, string filePath)
         {
             using var fileStream = File.OpenRead(filePath);
             using var zipArchive = new ZipArchive(fileStream, ZipArchiveMode.Read);
@@ -233,7 +233,11 @@ namespace NuGetPush.Extensions
             using var nuspecStream = nuspecEntry.Open();
             var nuspecReader = new NuspecReader(nuspecStream);
 
-            return nuspecReader.GetDependencyGroups().SelectMany(group => group.Packages).ToHashSet();
+            return new PackageMetadata
+            {
+                Dependencies = nuspecReader.GetDependencyGroups().SelectMany(group => group.Packages).ToHashSet(),
+                Commit = nuspecReader.GetRepositoryMetadata().Commit,
+            };
         }
 
         private static bool IsUnauthorizedException(FatalProtocolException fatalProtocolException)

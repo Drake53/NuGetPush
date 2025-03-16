@@ -87,6 +87,8 @@ namespace NuGetPush.Models
 
         public NuGetVersion? KnownLatestLocalVersion { get; set; }
 
+        public string? KnownLatestLocalCommit { get; set; }
+
         public NuGetVersion? KnownLatestRemoteVersion { get; set; }
 
         public RemotePackageVersionRequestState KnownLatestRemoteVersionState { get; set; }
@@ -110,12 +112,13 @@ namespace NuGetPush.Models
                 return;
             }
 
-            KnownLatestLocalVersion = LocalPackageSource.GetLatestLocalNuGetVersion(this, out var dependencies);
+            KnownLatestLocalVersion = LocalPackageSource.GetLatestLocalNuGetVersion(this, out var metadata);
+            KnownLatestLocalCommit = metadata?.Commit;
 
             if (KnownLatestLocalVersion is not null && (KnownLatestVersion is null || KnownLatestLocalVersion > KnownLatestVersion))
             {
                 KnownLatestVersion = KnownLatestLocalVersion;
-                KnownLatestVersionDependencies = dependencies;
+                KnownLatestVersionDependencies = metadata?.Dependencies;
             }
         }
 
