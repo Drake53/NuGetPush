@@ -19,7 +19,7 @@ namespace NuGetPush.WinForms.Forms
     [DesignerCategory("")]
     internal sealed class MainForm : Form
     {
-        private const string Title = "NuGet Push v1.4.0";
+        private const string Title = "NuGet Push v1.5.0";
 
         private readonly TextBox _solutionInput;
         private readonly Button _solutionInputBrowseButton;
