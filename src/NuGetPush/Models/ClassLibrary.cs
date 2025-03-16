@@ -164,6 +164,12 @@ namespace NuGetPush.Models
                 var packageProject = solution.Projects.SingleOrDefault(packageProject => packageProject.PackageName == packageName);
                 if (packageProject is not null)
                 {
+                    if (packageProject.PackageVersion is null)
+                    {
+                        diagnostics.Add($"Dependency on misconfigured package project \"{packageName}\".");
+                        continue;
+                    }
+
                     try
                     {
                         var versionRange = PackageVersionHelper.GetVersionFromPackageReference(packageReference, centralPackageVersions);
