@@ -522,7 +522,7 @@ namespace NuGetPush.WinForms
                 try
                 {
                     FileInfo solutionFileInfo = fileInfo;
-                    List<string>? solutionFilterProjects = null;
+                    HashSet<string>? solutionFilterProjects = null;
                     if (string.Equals(fileInfo.Extension, ".slnf", StringComparison.OrdinalIgnoreCase))
                     {
                         using var solutionFilterFileStream = fileInfo.OpenRead();
@@ -535,7 +535,7 @@ namespace NuGetPush.WinForms
                         var solutionFilter = JsonSerializer.Deserialize<SolutionFilterFile>(solutionFilterFileStream, options);
 
                         solutionFileInfo = new FileInfo(Path.Combine(fileInfo.DirectoryName, solutionFilter.Solution.Path));
-                        solutionFilterProjects = solutionFilter.Solution.Projects.Select(path => Path.GetFullPath(path, fileInfo.DirectoryName)).ToList();
+                        solutionFilterProjects = solutionFilter.Solution.Projects.Select(path => Path.GetFullPath(path, fileInfo.DirectoryName)).ToHashSet(StringComparer.OrdinalIgnoreCase);
                     }
 
                     var repositoryRoot = await Git.GetRepositoryRootAsync(solutionFileInfo.DirectoryName, cancellationToken);

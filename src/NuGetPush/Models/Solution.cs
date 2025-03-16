@@ -24,15 +24,15 @@ namespace NuGetPush.Models
 {
     public class Solution
     {
-        private readonly string _solutionFileName;
+        private readonly string _solutionFilePath;
 
         private bool _projectsLoaded;
 
         public Solution(FileInfo solutionFileInfo, string? repositoryRoot)
         {
-            _solutionFileName = solutionFileInfo.FullName;
+            _solutionFilePath = solutionFileInfo.FullName;
 
-            Name = Path.GetFileNameWithoutExtension(_solutionFileName);
+            Name = Path.GetFileNameWithoutExtension(_solutionFilePath);
             RepositoryRoot = repositoryRoot;
             PackageSources = PackageSourceFactory.GetPackageSources(solutionFileInfo.DirectoryName);
             Projects = new();
@@ -58,7 +58,7 @@ namespace NuGetPush.Models
 
         public override string ToString() => Name;
 
-        public void ParseSolutionProjects(List<string>? solutionFilterProjects, bool checkDependencies)
+        public void ParseSolutionProjects(HashSet<string>? solutionFilterProjects, bool checkDependencies)
         {
             if (_projectsLoaded)
             {
@@ -70,8 +70,6 @@ namespace NuGetPush.Models
                 throw new InvalidOperationException("Local package source is required to load projects.");
             }
 
-            var solutionFile = SolutionFile.Parse(_solutionFileName);
-
             using var projectCollection = new ProjectCollection();
             var projectOptions = new ProjectOptions
             {
@@ -81,6 +79,8 @@ namespace NuGetPush.Models
                 ProjectCollection = projectCollection,
             };
 
+            var solutionFile = SolutionFile.Parse(_solutionFilePath);
+
             foreach (var projectInSolution in solutionFile.ProjectsInOrder)
             {
                 if (projectInSolution.ProjectType == SolutionProjectType.SolutionFolder)
@@ -88,22 +88,10 @@ namespace NuGetPush.Models
                     continue;
                 }
 
-                if (solutionFilterProjects is not null)
+                if (solutionFilterProjects is not null &&
+                    !solutionFilterProjects.Contains(projectInSolution.AbsolutePath))
                 {
-                    var isProjectInSolutionFilter = false;
-                    foreach (var solutionFilterProject in solutionFilterProjects)
-                    {
-                        if (string.Equals(solutionFilterProject, projectInSolution.AbsolutePath, StringComparison.OrdinalIgnoreCase))
-                        {
-                            isProjectInSolutionFilter = true;
-                            break;
-                        }
-                    }
-
-                    if (!isProjectInSolutionFilter)
-                    {
-                        continue;
-                    }
+                    continue;
                 }
 
                 Project project;
