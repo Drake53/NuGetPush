@@ -8,13 +8,13 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 
-using NuGet.Common;
 using NuGet.Configuration;
 using NuGet.Packaging;
 using NuGet.Packaging.Core;
@@ -23,7 +23,11 @@ using NuGet.Versioning;
 
 using NuGetPush.Helpers;
 using NuGetPush.Models;
+
+#if !MOCK_REMOTE
+using NuGet.Common;
 using NuGetPush.Processes;
+#endif
 
 namespace NuGetPush.Extensions
 {
@@ -223,12 +227,13 @@ namespace NuGetPush.Extensions
 
         private static HashSet<PackageDependency> GetDependenciesFromNupkg(ClassLibrary classLibrary, string filePath)
         {
-            using var zip = Ionic.Zip.ZipFile.Read(filePath);
-            var nuspec = zip[$"{classLibrary.PackageName}.nuspec"];
-            using var zipEntryReader = nuspec.OpenReader();
-            var reader = new NuspecReader(zipEntryReader);
+            using var fileStream = File.OpenRead(filePath);
+            using var zipArchive = new ZipArchive(fileStream, ZipArchiveMode.Read);
+            var nuspecEntry = zipArchive.GetEntry($"{classLibrary.PackageName}.nuspec");
+            using var nuspecStream = nuspecEntry.Open();
+            var nuspecReader = new NuspecReader(nuspecStream);
 
-            return reader.GetDependencyGroups().SelectMany(group => group.Packages).ToHashSet();
+            return nuspecReader.GetDependencyGroups().SelectMany(group => group.Packages).ToHashSet();
         }
 
         private static bool IsUnauthorizedException(FatalProtocolException fatalProtocolException)
