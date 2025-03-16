@@ -40,8 +40,8 @@ namespace NuGetPush.WinForms.Controls
             View = View.Details;
             Columns.AddRange(new[]
             {
-                new ColumnHeader { Text = "Status", Width = 102 },
-                new ColumnHeader { Text = "FileName", Width = 300 },
+                new ColumnHeader { Text = "Status", Width = 113 },
+                new ColumnHeader { Text = "FileName", Width = 272 },
                 new ColumnHeader { Text = "Version", Width = 60 },
                 new ColumnHeader { Text = "(Local)", Width = 64 },
                 new ColumnHeader { Text = "(Remote)", Width = 94 },
