@@ -127,10 +127,18 @@ namespace NuGetPush.WinForms.Forms
 
                 openFileDialog.Filter = string.Join('|', new[]
                 {
+#if NET8_0_OR_GREATER
+                    "Solution File or Solution Filter|*.sln;*.slnf;*.slnx",
+                    "Solution File|*.sln",
+                    "Solution Filter|*.slnf",
+                    "Xml Solution File|*.slnx",
+                    "All files|*.*",
+#else
                     "Solution or Solution Filter|*.sln;*.slnf",
                     "Solution|*.sln",
                     "Solution Filter|*.slnf",
                     "All files|*.*",
+#endif
                 });
 
                 var openFileDialogResult = openFileDialog.ShowDialog();

@@ -624,7 +624,7 @@ namespace NuGetPush.WinForms
 
                     await DotNet.SetMsBuildExePathAsync(cancellationToken);
 
-                    _solution.ParseSolutionProjects(solutionFilterProjects, true);
+                    await _solution.ParseSolutionProjectsAsync(solutionFilterProjects, true, cancellationToken);
 
                     foreach (var project in _solution.Projects)
                     {

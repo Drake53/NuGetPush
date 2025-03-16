@@ -38,5 +38,6 @@ The push option will upload the latest version in your local package source to t
 To prevent accidents, the push option will not work for projects with no (known) version in the remote package source if multiple projects are selected.
 
 This tool uses MSBuild to parse the .sln and .csproj files, which requires you to have the .NET SDK installed.
+Starting with .NET 8.0, .sln and .slnx files are parsed with Microsoft.VisualStudio.SolutionPersistence.
 
 If the remote package source is an azure artifacts feed, you must install the following NuGet plugin: https://github.com/microsoft/artifacts-credprovider

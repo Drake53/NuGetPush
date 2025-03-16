@@ -9,11 +9,16 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 
 using Microsoft.Build.Construction;
 using Microsoft.Build.Definition;
 using Microsoft.Build.Evaluation;
 using Microsoft.Build.Evaluation.Context;
+#if NET8_0_OR_GREATER
+using Microsoft.VisualStudio.SolutionPersistence.Serializer;
+#endif
 
 using NuGet.Configuration;
 using NuGet.Versioning;
@@ -25,16 +30,18 @@ namespace NuGetPush.Models
     public class Solution
     {
         private readonly string _solutionFilePath;
+        private readonly string _solutionDirectoryName;
 
         private bool _projectsLoaded;
 
         public Solution(FileInfo solutionFileInfo, string? repositoryRoot)
         {
             _solutionFilePath = solutionFileInfo.FullName;
+            _solutionDirectoryName = solutionFileInfo.DirectoryName;
 
             Name = Path.GetFileNameWithoutExtension(_solutionFilePath);
             RepositoryRoot = repositoryRoot;
-            PackageSources = PackageSourceFactory.GetPackageSources(solutionFileInfo.DirectoryName);
+            PackageSources = PackageSourceFactory.GetPackageSources(_solutionDirectoryName);
             Projects = new();
             TestProjects = new();
             InvalidProjects = new();
@@ -58,7 +65,7 @@ namespace NuGetPush.Models
 
         public override string ToString() => Name;
 
-        public void ParseSolutionProjects(HashSet<string>? solutionFilterProjects, bool checkDependencies)
+        public async Task ParseSolutionProjectsAsync(HashSet<string>? solutionFilterProjects, bool checkDependencies, CancellationToken cancellationToken)
         {
             if (_projectsLoaded)
             {
@@ -79,6 +86,20 @@ namespace NuGetPush.Models
                 ProjectCollection = projectCollection,
             };
 
+#if NET8_0_OR_GREATER
+            var solutionSerializer = SolutionSerializers.GetSerializerByMoniker(_solutionFilePath);
+            if (solutionSerializer is null)
+            {
+                throw new InvalidOperationException($"No known serializer for '{Path.GetExtension(_solutionFilePath)}' solution file format.");
+            }
+
+            var solutionFile = await solutionSerializer.OpenAsync(_solutionFilePath, cancellationToken);
+
+            foreach (var projectInSolution in solutionFile.SolutionProjects)
+            {
+                var projectName = projectInSolution.ActualDisplayName;
+                var projectAbsolutePath = Path.GetFullPath(projectInSolution.FilePath, _solutionDirectoryName);
+#else
             var solutionFile = SolutionFile.Parse(_solutionFilePath);
 
             foreach (var projectInSolution in solutionFile.ProjectsInOrder)
@@ -88,8 +109,12 @@ namespace NuGetPush.Models
                     continue;
                 }
 
+                var projectName = projectInSolution.ProjectName;
+                var projectAbsolutePath = projectInSolution.AbsolutePath;
+#endif
+
                 if (solutionFilterProjects is not null &&
-                    !solutionFilterProjects.Contains(projectInSolution.AbsolutePath))
+                    !solutionFilterProjects.Contains(projectAbsolutePath))
                 {
                     continue;
                 }
@@ -97,25 +122,25 @@ namespace NuGetPush.Models
                 Project project;
                 try
                 {
-                    project = Project.FromFile(projectInSolution.AbsolutePath, projectOptions);
+                    project = Project.FromFile(projectAbsolutePath, projectOptions);
                 }
                 catch
                 {
-                    InvalidProjects.Add(projectInSolution.AbsolutePath);
+                    InvalidProjects.Add(projectAbsolutePath);
                     continue;
                 }
 
                 if (project.Properties.Any(property => property.Name == "OutputType" && property.EvaluatedValue == "Library") &&
                     project.Properties.Any(property => property.Name == "IsPackable" && property.EvaluatedValue == "true"))
                 {
-                    Projects.Add(new ClassLibrary(projectInSolution.ProjectName, projectInSolution.AbsolutePath, project, SelectedLocalPackageSource, SelectedRemotePackageSource));
+                    Projects.Add(new ClassLibrary(projectName, projectAbsolutePath, project, SelectedLocalPackageSource, SelectedRemotePackageSource));
                 }
                 else if (project.Items.Any(item => item.ItemType == "PackageReference"
                     && (item.EvaluatedInclude == "MSTest.TestFramework"
                     || item.EvaluatedInclude == "NUnit"
                     || item.EvaluatedInclude == "xunit")))
                 {
-                    TestProjects.Add(new TestProject(projectInSolution.ProjectName, projectInSolution.AbsolutePath, project));
+                    TestProjects.Add(new TestProject(projectName, projectAbsolutePath, project));
                 }
             }
 
