@@ -542,7 +542,7 @@ namespace NuGetPush.WinForms
 
                     var uncommittedChanges = await Git.CheckUncommittedChangesAsync(repositoryRoot, cancellationToken);
 
-                    _solution = new Solution(repositoryRoot, solutionFileInfo.FullName);
+                    _solution = new Solution(solutionFileInfo, repositoryRoot);
 
                     using var packageSourcesForm = new PackageSourcesForm(_solution.PackageSources);
 

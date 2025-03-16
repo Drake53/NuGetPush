@@ -28,15 +28,12 @@ namespace NuGetPush.Models
 
         private bool _projectsLoaded;
 
-        public Solution(string? repositoryRoot, string fileName)
+        public Solution(FileInfo solutionFileInfo, string? repositoryRoot)
         {
-            RepositoryRoot = repositoryRoot;
-
-            var solutionFileInfo = new FileInfo(fileName);
-            Name = solutionFileInfo.Name[..^4];
-
             _solutionFileName = solutionFileInfo.FullName;
 
+            Name = Path.GetFileNameWithoutExtension(_solutionFileName);
+            RepositoryRoot = repositoryRoot;
             PackageSources = PackageSourceFactory.GetPackageSources(solutionFileInfo.DirectoryName);
             Projects = new();
             TestProjects = new();
